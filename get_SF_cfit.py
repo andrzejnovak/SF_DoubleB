@@ -2,119 +2,183 @@
 from cfit import *
 import numpy as np
 
-def runSF_x(file, pt, tag, var = "JP", merge=False, glue=True, inclSYS=True, SF_dict={}):
+def runSF_x(file, pt, wp, merge=False, glue=True, inclSYS=True, SF_dict={}, SV=True):
 	N_digits_SF = 3
 	N_digits_err = 4
-	if pt == "pt250to350": ptbin = 0
-	if pt == "pt350to430": ptbin = 1
-	if pt == "pt430to2000": ptbin = 2
-	cf = cfit(var + " discriminator")
-	cf.SetVerbose(0)
-	cf.ProducePlots(True)
-	cf.SetLegendHeader(pt+" "+tag)
-	cf.SetOptimization(OPT_MORPH_SGN_SIGMA)
-	cf.SetCovarianceMode(COV_MAX)
-	cf.SetMorphing(OPTMORPH_CUTOFF,0.5)
-	cf.SetInputFile(file)
+	if pt == "pt250to350": pt_bin = 0
+	if pt == "pt350to430": pt_bin = 1
+	if pt == "pt430to2000": pt_bin = 2
+
+	cfJP = cfit("JP discriminator")
+	cfSV = cfit("SV discriminator")
+	cfJPtag = cfit("JPtagged discriminator")
+
+	cfJP.SetMatrixName("matrix_"+pt)
+	cfJP.SetMatrixOption("WRITE")
+	cfSV.SetMatrixName("SVmatrix_"+pt)
+	cfSV.SetMatrixOption("WRITE")
+	cfJPtag.SetMatrixName("JPtagmatrix_"+pt)
+	cfJPtag.SetMatrixOption("WRITE")
+
+	# Settings
+	for cf in [cfJP, cfSV, cfJPtag]:
+		cf.SetVerbose(0)
+		cf.ProducePlots(True)
+		cf.SetLegendHeader(pt+" "+wp)
+		cf.SetOptimization(OPT_MORPH_SGN_SIGMA)
+		cf.SetCovarianceMode(COV_MAX)
+		cf.SetMorphing(OPTMORPH_CUTOFF,0.5)
+		cf.SetInputFile(file)
+	
 
 	if inclSYS:
-		#if merge:
-		#systlist = ["JES", "NTRACKS", "BFRAG", "CFRAG", "CD"]
-		#else:
-		systlist = ["JES", "NTRACKS", "BFRAG", "CFRAG", "CD", "K0L", "PU"]
+		#systlist = ["JES", "NTRACKS", "BFRAG", "CFRAG", "CD", "K0L", "PU"]
+		systlist = ["JES",  "BFRAG", "CFRAG", "CD", "K0L", "PU"]
 		for sysName in systlist:
 			# Flipped down up in Alice's code
-			cf.AddSys(sysName, "_"+sysName+"down" ,"_"+sysName+"up")
+			#pass
+			cfJP.AddSys(sysName, "_"+sysName+"down" ,"_"+sysName+"up")
+			cfSV.AddSys(sysName, "_"+sysName+"down" ,"_"+sysName+"up")
+			cfJPtag.AddSys(sysName, "_"+sysName+"down" ,"_"+sysName+"up")
 			#cf.AddSys(sysName, "_"+sysName+"up" ,"_"+sysName+"down") #-- this one is correct
-
-	cf.SetMatrixName("matrix_"+pt)
-	cf.SetMatrixOption("WRITE")
-
-	# Set DATA names
-	hname_data = "UNWEIGHTED__DATA__FatJet_"+var+"_all_"+pt+"_data_opt"
-	hname_data_tag = "UNWEIGHTED__DATA__FatJet_"+var+"_"+tag+"pass_"+pt+"_data_opt"
-	hname_data_untag = "UNWEIGHTED__DATA__FatJet_"+var+"_"+tag+"fail_"+pt+"_data_opt"
-
-	cf.SetData(hname_data)   
-	cf.SetDataTag(hname_data_tag)
-	cf.SetDataUntag(hname_data_untag)	
-
-	# Hist name setup
-	def_name_qcd = "UNWEIGHTED__QCDMuEnr__FatJet_"
-	hname_bfromg = def_name_qcd+var+"_all_"+pt+"_bfromg_opt"
-	hname_b = def_name_qcd+var+"_all_"+pt+"_b_opt"
-	hname_cfromg = def_name_qcd+var+"_all_"+pt+"_cfromg_opt"
-	hname_c = def_name_qcd+var+"_all_"+pt+"_c_opt"
-	hname_l = def_name_qcd+var+"_all_"+pt+"_l_opt"
-	hname_b_cfromg = def_name_qcd+var+"_all_"+pt+"_b_cfromg_opt"
-	hname_c_l = def_name_qcd+var+"_all_"+pt+"_c_l_opt"
-
-	hname_bfromg_tag = hname_bfromg.replace("_all_", "_"+tag+"pass_")
-	hname_b_tag = hname_b.replace("_all_", "_"+tag+"pass_")
-	hname_cfromg_tag = hname_cfromg.replace("_all_", "_"+tag+"pass_")
-	hname_c_tag = hname_c.replace("_all_", "_"+tag+"pass_")
-	hname_l_tag = hname_l.replace("_all_", "_"+tag+"pass_")
-	hname_b_cfromg_tag = hname_b_cfromg.replace("_all_", "_"+tag+"pass_")
-	hname_c_l_tag = hname_c_l.replace("_all_", "_"+tag+"pass_")
-
-	hname_bfromg_untag = hname_bfromg.replace("_all_", "_"+tag+"fail_")
-	hname_b_untag = hname_b.replace("_all_", "_"+tag+"fail_")
-	hname_cfromg_untag = hname_cfromg.replace("_all_", "_"+tag+"fail_")
-	hname_c_untag = hname_c.replace("_all_", "_"+tag+"fail_")
-	hname_l_untag = hname_l.replace("_all_", "_"+tag+"fail_")
-	hname_b_cfromg_untag = hname_b_cfromg.replace("_all_", "_"+tag+"fail_")
-	hname_c_l_untag = hname_c_l.replace("_all_", "_"+tag+"fail_")
 
 	# Mergning for low count templates:
 	if merge: tempNs = ["g #rightarrow b#bar{b}", "b + g #rightarrow c#bar{c}", "c + dusg"]
 	else: 	tempNs = ["g #rightarrow b#bar{b}", "b", "g #rightarrow c#bar{c}", "c", "dusg"]
-	def add_templates(glue, merge):
+	def add_templates(cf, glue, merge, var = "JP", SV=SV, tag=False):
+		# Set DATA names
+		hname_data = "UNWEIGHTED__DATA__FatJet_"+var+"_all_"+pt+"_data_opt"
+		hname_data_tag = "UNWEIGHTED__DATA__FatJet_"+var+"_"+wp+"pass_"+pt+"_data_opt"
+		hname_data_untag = "UNWEIGHTED__DATA__FatJet_"+var+"_"+wp+"fail_"+pt+"_data_opt"
+		if SV and not tag:
+			hname_data = "UNWEIGHTED__DATA__FatJet_"+var+"_all_"+pt+"_data_opt"
+			hname_data_tag = "UNWEIGHTED__DATA__FatJet_"+var+"hasSV"+"_all_"+pt+"_data_opt"
+			hname_data_untag = "UNWEIGHTED__DATA__FatJet_"+var+"noSV"+"_all_"+pt+"_data_opt"
+		elif SV and tag:
+			hname_data = "UNWEIGHTED__DATA__FatJet_"+var+"_"+wp+"pass_"+pt+"_data_opt"
+			hname_data_tag = "UNWEIGHTED__DATA__FatJet_"+var+"hasSV_"+wp+"pass_"+pt+"_data_opt"
+			hname_data_untag = "UNWEIGHTED__DATA__FatJet_"+var+"noSV_"+wp+"pass_"+pt+"_data_opt"
+
+		cf.SetData(hname_data)   
+		cf.SetDataTag(hname_data_tag)
+		cf.SetDataUntag(hname_data_untag)	
+
+		# Hist name setup	
+		## Nominal names	
+		def_name_qcd = "UNWEIGHTED__QCDMuEnr__FatJet_"
+		hname_bfromg = 	def_name_qcd+	var+"_all_"+	pt+"_bfromg_opt"
+		hname_b = 		def_name_qcd+	var+"_all_"+	pt+"_b_opt"
+		hname_cfromg = 	def_name_qcd+	var+"_all_"+	pt+"_cfromg_opt"
+		hname_c = 		def_name_qcd+	var+"_all_"+	pt+"_c_opt"
+		hname_l = 		def_name_qcd+	var+"_all_"+	pt+"_l_opt"
+		hname_b_cfromg =def_name_qcd+	var+"_all_"+	pt+"_b_cfromg_opt"
+		hname_c_l = 	def_name_qcd+	var+"_all_"+	pt+"_c_l_opt"
+
+		# Make a list
+		hists_nom = [hname_bfromg, hname_b, hname_cfromg, hname_c, hname_l, hname_b_cfromg, hname_c_l]
+		# Make lists for tag and untag
+		#0 					 1 				2 					3				4 				5 						6
+		#hname_bfromg_tag,	 hname_b_tag, 	hname_cfromg_tag, 	hname_c_tag, 	hname_l_tag, 	hname_b_cfromg_tag, 	hname_c_l_tag 
+		#hname_bfromg_untag, hname_b_untag, hname_cfromg_untag, hname_c_untag, 	hname_l_untag, 	hname_b_cfromg_untag, 	hname_c_l_untag 
+		hists_tag = [] 
+		hists_untag = [] 
+		hists_nom_temp = []
+		## Tag and untag
+		### Regular mode
+		if not SV : 
+			for i, hist_nom in enumerate(hists_nom):
+				hist = hist_nom.replace("_all_", "_"+wp+"pass_")
+				hists_tag.append(hist)
+			for i, hist_nom in enumerate(hists_nom):
+				hist = hist_nom.replace("_all_", "_"+wp+"fail_")
+				hists_untag.append(hist)
+		### SV mode all			
+		elif SV and not tag:
+			for i, hist_nom in enumerate(hists_nom):
+				hist = hist_nom.replace(var, var+"hasSV")
+				hists_tag.append(hist)
+			for i, hist_nom in enumerate(hists_nom):
+				hist = hist_nom.replace(var, var+"noSV")
+				hists_untag.append(hist)
+
+		### SV mode tagged		
+		elif SV and tag:
+			for i, hist_nom in enumerate(hists_nom):
+				hist = hist_nom.replace(var, var+"hasSV").replace("_all_", "_"+wp+"pass_")
+				hists_tag.append(hist)
+			for i, hist_nom in enumerate(hists_nom):
+				hist = hist_nom.replace(var, var+"noSV").replace("_all_", "_"+wp+"pass_")
+				hists_untag.append(hist)
+			for i, hist_nom in enumerate(hists_nom):
+				hist = hist_nom.replace("_all_", "_"+wp+"pass_")
+				hists_nom_temp.append(hist)
+			hists_nom = hists_nom_temp
+		else: 
+			print "Really should not happen"
+
+		#import sys
+		#sys.exit()
 		# AddTemplate(label, name in input file, color)
-		if merge:			
-			cf.AddTemplate(tempNs[0],hname_bfromg,	65)
-			cf.AddTemplate(tempNs[1],hname_b_cfromg,628)
-			cf.AddTemplate(tempNs[2],hname_c_l,	597)
-			#if glue:
-			#	cf.GlueTemplates(tempNs[1:],"other flavours",28);
+		if merge:	
+			cf.AddTemplate(tempNs[0], hists_nom[0]	,65)
+			cf.AddTemplate(tempNs[1], hists_nom[5],628)
+			cf.AddTemplate(tempNs[2], hists_nom[6],	597)
+			if glue and SV:
+				cf.GlueTemplates(tempNs[1:],"other flavours",28);
 		else:
-			cf.AddTemplate(tempNs[0],hname_bfromg,	65)
-			cf.AddTemplate(tempNs[1],hname_b,		213)
-			cf.AddTemplate(tempNs[2],hname_cfromg,	208)
-			cf.AddTemplate(tempNs[3],hname_c, 		206)
-			cf.AddTemplate(tempNs[4],hname_l, 		212)
+			cf.AddTemplate(tempNs[0], hists_nom[0],	65)
+			cf.AddTemplate(tempNs[1], hists_nom[1],		213)
+			cf.AddTemplate(tempNs[2], hists_nom[2],	208)
+			cf.AddTemplate(tempNs[3], hists_nom[3], 		206)
+			cf.AddTemplate(tempNs[4], hists_nom[4], 		212)
 			if glue:
-				cf.GlueTemplates([tempNs[1], tempNs[2]],"b + g #rightarrow c#bar{c}",628);
-				cf.GlueTemplates([tempNs[3], tempNs[4]],"c + dusg",597)
+				if not SV:
+					cf.GlueTemplates([tempNs[1], tempNs[2]],"b + g #rightarrow c#bar{c}",628);
+					cf.GlueTemplates([tempNs[3], tempNs[4]],"c + dusg",597)
+				else:
+					cf.GlueTemplates(tempNs[1:],"other flavours",28);
 
 		if merge:
-			cf.AddTemplateTag(tempNs[0],hname_bfromg_tag,	65)
-			cf.AddTemplateTag(tempNs[1],hname_b_cfromg_tag,628)
-			cf.AddTemplateTag(tempNs[2],hname_c_l_tag,	597)
-			#if glue:
-			#	cf.GlueTemplatesTag(tempNs[1:],"other flavours",28);
-		else:
-			cf.AddTemplateTag(tempNs[0],hname_bfromg_tag,	65)
-			cf.AddTemplateTag(tempNs[1],hname_b_tag,		213)
-			cf.AddTemplateTag(tempNs[2],hname_cfromg_tag,	208)
-			cf.AddTemplateTag(tempNs[3],hname_c_tag,		206)
-			cf.AddTemplateTag(tempNs[4],hname_l_tag,		212)
-			if glue:
+			cf.AddTemplateTag(tempNs[0], hists_tag[0],		 65)
+			cf.AddTemplateTag(tempNs[1], hists_tag[5], 		628)
+			cf.AddTemplateTag(tempNs[2], hists_tag[6], 		597)
+			if glue and SV:
 				cf.GlueTemplatesTag(tempNs[1:],"other flavours",28);
+		else:
+			cf.AddTemplateTag(tempNs[0], hists_tag[0],		65)
+			cf.AddTemplateTag(tempNs[1], hists_tag[1],		213)
+			cf.AddTemplateTag(tempNs[2], hists_tag[2],		208)
+			cf.AddTemplateTag(tempNs[3], hists_tag[3],		206)
+			cf.AddTemplateTag(tempNs[4], hists_tag[4],		212)
+			if glue:
+				if not SV:
+					cf.GlueTemplatesTag([tempNs[1], tempNs[2]],"b + g #rightarrow c#bar{c}",628);
+					cf.GlueTemplatesTag([tempNs[3], tempNs[4]],"c + dusg",597)
+				else:
+					cf.GlueTemplatesTag(tempNs[1:],"other flavours",28);
 
 		if merge:
-			cf.AddTemplateUntag(tempNs[0],hname_bfromg_untag,	65)
-			cf.AddTemplateUntag(tempNs[1],hname_b_cfromg_untag,628)
-			cf.AddTemplateUntag(tempNs[2],hname_c_l_untag,	597)
+			cf.AddTemplateUntag(tempNs[0], hists_untag[0],	65)
+			cf.AddTemplateUntag(tempNs[1], hists_untag[5],	628)
+			cf.AddTemplateUntag(tempNs[2], hists_untag[6],	597)
 		else:			
-			cf.AddTemplateUntag(tempNs[0],hname_bfromg_untag,	7)
-			cf.AddTemplateUntag(tempNs[1],hname_b_untag,		213)
-			cf.AddTemplateUntag(tempNs[2],hname_cfromg_untag,	42)
-			cf.AddTemplateUntag(tempNs[3],hname_c_untag,		8)
-			cf.AddTemplateUntag(tempNs[4],hname_l_untag,		4)
+			cf.AddTemplateUntag(tempNs[0], hists_untag[0],	7)
+			cf.AddTemplateUntag(tempNs[1], hists_untag[1],	213)
+			cf.AddTemplateUntag(tempNs[2], hists_untag[2],	42)
+			cf.AddTemplateUntag(tempNs[3], hists_untag[3],	8)
+			cf.AddTemplateUntag(tempNs[4], hists_untag[4],	4)
+	
+	if not SV:
+		#add_templates(cf, glue, merge, var="JP")
+		pass
+	else:
+		add_templates(cfSV, glue, merge, SV=False, var="tau1VertexMassCorr")
+		add_templates(cfJP, glue, merge, var="JP", SV=True, tag=False)
+		add_templates(cfJPtag, glue, merge, var="JP", SV=True, tag=True)
 		
-	add_templates(glue, merge)
 
-	def getSF(cf, tempNs, sysVar="", statVar=0):
+	#def getpars(cf, tempNs, sysVar="", statVar=-1):
+	def getpars(cf, tempNs, sysVar, statVar): # TO make it work with multiprocessing
 		par, err = [], []
 		par_tag, err_tag = [], []
 
@@ -144,6 +208,9 @@ def runSF_x(file, pt, tag, var = "JP", merge=False, glue=True, inclSYS=True, SF_
 		nmc_tag = 0. #Total
 		for i, name in enumerate(tempNs): nmc_tag += cf.GetNTemplate(name)
 
+		#print chi2
+		#print chi2_tag
+
 		fr = nmc1/nmc;
 		fr_tag = nmc1_tag/nmc_tag;	   
 		effMC = nmc1_tag/nmc1
@@ -152,14 +219,104 @@ def runSF_x(file, pt, tag, var = "JP", merge=False, glue=True, inclSYS=True, SF_
 		effDATA = effMC*par_tag[0]/par[0]
 
 		sf = effDATA/effMC
-		return sf
+		return nmc1, nmc, nmc1_tag, nmc_tag, par[0], par_tag[0]
+
+	def getSF(cfmain, tempNs, cfJPall=None, cfJPtag=None, sysVar="", statVar=-1, SV=SV):
+
+		if not SV :
+			if cfJPtag!=None and cfJPall!=None: 
+				raise "Something is wrong"
+			nmc1, nmc, nmc1_tag, nmc_tag, par, par_tag = getpars(cfmain, tempNs, sysVar=sysVar, statVar=statVar)
+			fr = nmc1/nmc;
+			fr_tag = nmc1_tag/nmc_tag;	   
+			effMC = nmc1_tag/nmc1
+			#effDATA = nmc_tag/nmc*par_tag[0]/par[0]*fr_tag/fr		
+			#effDATA =  nmc1_tag/nmc1 * par_tag[0]/par[0]
+			effDATA = effMC*par_tag/par
+
+			sf = effDATA/effMC
+			SF = sf
+			#SF = par_tag/par
+
+		else:	
+			import os
+
+			#try:
+			#	os.system('rm -r JPfit')
+			#	os.system('rm -r JPtagfit')
+			#	os.system('rm -r SV')
+			#except:
+			#	print "dirs have not yet been created, all good"
+			#CFJP		
+			#print "Fitting JPall"
+			nmc1, nmc, nmc1_tag, nmc_tag, par, par_tag = getpars(cfJPall, tempNs, sysVar, statVar)
+			#ndata1 = nmc1*par			 
+			#nmc1_SV = nmc1_tag
+			#ndata1_SV = nmc1_SV*par_tag
+			#effMC_SV = nmc1_SV/nmc1
+			#effDATA_SV = ndata1_SV/ndata1;
+			#os.mkdir('JPfit')
+			#os.system('mv pics/*png JPfit')
+			
+			#print "Fitting JPtagged" 
+			nmc1_tagged, nmc, nmc1_tagged_SV, nmc_tag, parJPtagged, par_tagJPtagged = getpars(cfJPtag, tempNs, sysVar, statVar)			  
+			#ndata1_tagged = nmc1_tagged*parJPtagged		   
+			#ndata1_tagged_SV = nmc1_tagged_SV*par_tagJPtagged
+			#effMC_SV_tagged = nmc1_tagged_SV/nmc1_tagged;
+			#effDATA_SV_tagged = ndata1_tagged_SV/ndata1_tagged;
+			#os.mkdir('JPtagfit')
+			#os.system('mv pics/*png JPtagfit')
+					
+			#print "Fitting SVmass"
+			nmc1_SV_SVfit, nmc, nmc1_tagged_SV_SVfit, nmc_tag, parSV, par_tagSV = getpars(cfmain, tempNs, sysVar, statVar)
+			#ndata1_SV_SVfit    = nmc1_SV_SVfit*parSV
+			#ndata1_tagged_SV_SVfit = nmc1_tagged_SV_SVfit*par_tagSV
+			#nmc1_tag_estim = nmc1_tagged_SV_SVfit/effMC_SV_tagged;
+			#nmc1_estim     = nmc1_SV_SVfit/effMC_SV;  
+			#effMC = nmc1_tag_estim/nmc1_estim;
+			#os.mkdir('SV')
+			#os.system('mv pics/*png SV')
+			
+			#data1_tag_estim = ndata1_tagged_SV_SVfit/effDATA_SV_tagged;
+			#ndata1_estim     = ndata1_SV_SVfit/effDATA_SV; 
+			#effDATA = ndata1_tag_estim/ndata1_estim;
+			#SF = effDATA/effMC; 
+
+			#import multiprocessing as mp
+			#print "MULTI"
+			#from pathos.multiprocessing import ProcessingPool as Pool
+			#p = Pool(4)
+			#all_pars = (p.map(getpars, [[cfJPall, tempNs, sysVar, statVar], [cfJPtag, tempNs, sysVar, statVar], [cfmain, tempNs, sysVar, statVar]]))
+			#print all_pars
+
+			SF = par_tagSV*parJPtagged*par_tag/(par_tagJPtagged*parSV*par)
+			#print "parSV_tag", par_tagSV
+			#print "parJPtag", parJPtagged
+			#print "parJP_tag", par_tag
+			#print "parJPtag_tag", par_tagJPtagged
+			#print "parSV", parSV
+			#print "parJP", par
+
+			pars = [par, par_tag, parJPtagged,par_tagJPtagged, parSV, par_tagSV]
+
+			#os.system('mv JPfit pics/')
+			#os.system('mv JPtagfit pics/')
+			#os.system('mv SV pics/')
+		
+		return SF, pars
 
 	#if inclSYS==False:
-	SF = getSF(cf, tempNs, sysVar="")
-	#print "SF =", SF
+	if not SV:
+		SF = getSF(cf, tempNs, sysVar="", SV=False)
+	else:
+		SF, pars = getSF(cfSV, tempNs, cfJPall=cfJP, cfJPtag=cfJPtag, sysVar="", SV=SV)
+	print "SF =", SF
 
 	if inclSYS==True:
 		print "Calculating Errors"
+		for cf in [cfJP, cfSV, cfJPtag]:
+			cf.ProducePlots(False)
+			cf.SetMatrixOption("READ")
 		sigma_stat = 0
    		sigma_syst_up = 0
 		sigma_syst_down = 0
@@ -172,10 +329,11 @@ def runSF_x(file, pt, tag, var = "JP", merge=False, glue=True, inclSYS=True, SF_
 		if len(systVarlist) != len(ups+downs): 
 			print "Incorrect number of systs considered"
 		
-		cf.SetMatrixOption("READ")
-		cf.ProducePlots(False)
 		for i, sysVar in enumerate(systVarlist):
-			SF_sys_i = getSF(cf, tempNs, sysVar=sysVar)
+			if not SV:
+				SF_sys_i = getSF(cf, tempNs, sysVar=sysVar)
+			else:
+				SF_sys_i, pars = getSF(cfSV, tempNs, cfJPall=cfJP, cfJPtag=cfJPtag, sysVar=sysVar, SV=SV)
 			print "SF", sysVar, SF, SF_sys_i, (SF - SF_sys_i)**2
 			delta = SF - SF_sys_i
 			sigma2 = delta**2
@@ -187,28 +345,31 @@ def runSF_x(file, pt, tag, var = "JP", merge=False, glue=True, inclSYS=True, SF_
 				sigma_syst_down += sigma2
 
 		# Calculate statistical errs
-		cf.SetMatrixOption("READ")
-		cf.ProducePlots(False)
 		stat_SFs = []
-		for i in range(100):
-			SF_stat_i = getSF(cf, tempNs, sysVar="", statVar=667+i)
+		for i in range(20):
+			if not SV:
+				SF_stat_i, pars = getSF(cf, tempNs, sysVar="", statVar=667+i)
+			else:
+				SF_stat_i, pars = getSF(cfSV, tempNs, cfJPall=cf, cfJPtag=cfJPtag, sysVar="", statVar=667+i, SV=SV)
 			stat_SFs.append(SF_stat_i)
 
-		sf_stat_mean = sum(stat_SFs)/100.
+		sf_stat_mean = sum(stat_SFs)/20.
 		for SF_i in stat_SFs:
-			sigma_stat += (sf_stat_mean - SF_i)**2/100.
+			sigma_stat += (sf_stat_mean - SF_i)**2/20.
 		sigma_stat = np.sqrt(sigma_stat);
 
 		# 100 -105 systematics missing
 		for i in range(100,105):
-			cf.SetMatrixOption("WRITE")
-			cf.ProducePlots(False)
-		
+			for cf in [cfJP, cfSV, cfJPtag]:
+				cf.ProducePlots(False)
+				cf.SetMatrixOption("WRITE")
+	
 			if i == 100: cf.SetOptimization(OPT_NOCORR);
 			if i == 101: cf.SetMorphing(OPTMORPH_CUTOFF,0.25);
 			if i == 102: cf.SetMorphing(OPTMORPH_CUTOFF,0.75);
 			if i == 103: cf.SetMorphing(OPTMORPH_GEOMETRIC);
 			if i == 104:
+				continue
 				cf = cfit("")
 				cf.SetVerbose(0)
 				cf.ProducePlots(False)
@@ -222,13 +383,16 @@ def runSF_x(file, pt, tag, var = "JP", merge=False, glue=True, inclSYS=True, SF_
 				cf.SetMatrixName(mname)
 				cf.SetMatrixOption("WRITE")
 
-				cf.SetData(hname_data)   
-				cf.SetDataTag(hname_data_tag)
-				cf.SetDataUntag(hname_data_untag)
+				#cf.SetData(hname_data)   
+				#cf.SetDataTag(hname_data_tag)
+				#cf.SetDataUntag(hname_data_untag)
 
-				add_templates(glue, merge)
+				#add_templates(cf, glue, merge)
 
-			SF_sys2_i = getSF(cf, tempNs, sysVar="", statVar=-1)
+			if not SV:
+				SF_sys2_i = getSF(cf, tempNs, sysVar="", statVar=-1)
+			else:
+				SF_sys2_i, par = getSF(cfSV, tempNs, cfJPall=cfJP, cfJPtag=cfJPtag, sysVar="", statVar=-1, SV=SV)
 			cf.SetOptimization(OPT_MORPH_SGN_SIGMA)
 			cf.SetMorphing(OPTMORPH_CUTOFF,0.5)
 
@@ -248,17 +412,18 @@ def runSF_x(file, pt, tag, var = "JP", merge=False, glue=True, inclSYS=True, SF_
 			else:
 				sigma_syst_down += (SF - SF_i[ptbin])*(SF - SF_i[ptbin])
 		"""
+		
 		for SF_i in SF_dict.keys():
 			if SF_dict[SF_i] == []: continue
-			error = SF - SF_dict[SF_i][ptbin]
+			error = SF - SF_dict[SF_i][pt_bin]
 			sigma2 = error**2
-			if SF < SF_dict[SF_i][ptbin]:
+			if SF < SF_dict[SF_i][pt_bin]:
 				sigma_syst_up += sigma2
 			else:
 				sigma_syst_down += sigma2
 			errors.append(error)
 			variances_names.append(SF_i)
-
+		
 		syst_up = np.sqrt(sigma_syst_up)
 		syst_down = np.sqrt(sigma_syst_down)
 
@@ -275,15 +440,10 @@ def runSF_x(file, pt, tag, var = "JP", merge=False, glue=True, inclSYS=True, SF_
 		#return SF, np.round(sigma_stat, N_digits_err), np.round(syst_up, N_digits_err), np.round(syst_down, N_digits_err)
 		return SF, sigma_stat, syst_up, syst_down, variances_names, errors, variances
 	else:
-		return SF
+		return SF, pars
 
 if __name__ == "__main__":
-	fname = "/eos/user/a/anovak/SF/CMSSW_7_6_4/src/CFIT/SFcalculation/2018filesSyst/Run2017BCDEF_ReReco_QCDMuonEnriched_AK8Jet300orAK4Jet300_Pt350_Final_DoubleMuonTaggedFatJets_histograms_btagval_v2_ptReweighted_SysMerged_SFtemplates_DoubleBL.root"
-
-	fname = "/eos/user/a/anovak/SF/CMSSW_7_6_4/src/CFIT/SFcalculation/2018filesSyst/Run2017BCDEF_ReReco_QCDMuonEnriched_AK4DiJet170_Pt250_Final_DoubleMuonTaggedFatJets_histograms_btagval_v1_v2_ptReweighted_SysMerged_SFtemplates_DoubleBL.root"
-
-	fname2 = fname.replace(".root", "_b_0p5.root")
-
+	
 	SF_dict = {
 	'SF_b_down' : [1.02, 0.98, 1.0],
 	'SF_b_up' : [1.02, 0.99, 1.0], 
@@ -297,19 +457,15 @@ if __name__ == "__main__":
 	'SF_JP' : []
 	}
 
-	tag = "DoubleBL"
-	#tag = "DoubleBM2"
-	pt = "pt250to350"
-	#pt = "pt350to430"
-	#pt = "pt430to2000"
+	WP = "DoubleBH"
+	pt_bin = "pt430to2000"
 
-	SF, sigma_stat, syst_up, syst_down, variances_names, errors, variances = runSF_x(fname, pt, tag, glue=True, inclSYS=True, SF_dict=SF_dict) 
-	#SF = runSF_x(fname, pt, tag, glue=False, inclSYS=False, SF_dict=SF_dict) 
 
-	from prettytable import PrettyTable
-	t = PrettyTable(["WP+pt", "Sigma", "Sigma^2"])
-	variances = ["{:.2E}".format(var) for var in variances]
-	errors = ["{:.2E}".format(err) for err in errors]
-	for name, var, err in zip(variances_names, errors, variances):
-		t.add_row([name, err, var])
-	print t
+	#SF, sigma_stat, syst_up, syst_down, variances_names, errors, variances = runSF_x(fname, pt, tag, glue=True, inclSYS=True, SF_dict=SF_dict) 
+	#SF = runSF_x(fname, pt, wp, glue=False, inclSYS=False, SF_dict=SF_dict) 
+	r = 'singlefilenorm/'
+	#r = 'normfile/'
+	file_name = r+'Run2017BCDEF_ReReco_QCDMuonEnriched_AK8Jet300orAK4Jet300_Pt350_Final_DoubleMuonTaggedFatJets_histograms_btagval_allVars_ptReweighted_SysMerged_SFtemplates_DoubleBH.root'
+	glue=True;  inclSYS=False; merge=False
+	SF, pars = runSF_x(file_name, pt_bin, WP, merge=merge, glue=glue, inclSYS=inclSYS)		
+	

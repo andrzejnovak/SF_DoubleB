@@ -43,8 +43,12 @@ def SFComp(WP, SFs, Stat, Sysup, Sysdown):
         ys = [SFs[0]]*smoothing+ys+[SFs[-1]]*smoothing
 
         # New error values        
-        eyu = [sum(x)+SFs[i] for i,x in enumerate(zip(Stat, Sysup))]
-        eyd = [SFs[i]-sum(x) for i,x in enumerate(zip(Stat, Sysdown))]
+        def sumunderroot(x):
+            sig2 = 0
+            for ix in x: sig2+=ix**2
+            return np.sqrt(sig2)
+        eyu = [sumunderroot(x)+SFs[i] for i,x in enumerate(zip(Stat, Sysup))]
+        eyd = [SFs[i]-sumunderroot(x) for i,x in enumerate(zip(Stat, Sysdown))]
         new_EysU = []
         for i in range(len(eyu)-1):
             new_EysU.append(eyu[i])
@@ -76,7 +80,7 @@ def SFComp(WP, SFs, Stat, Sysup, Sysdown):
 
     xs, ys, eyu, eyd = error_bounds(bins, SFs, Stat, Sysup, Sysdown)
     shapes = []
-    print xs
+    #print xs
     for i in range(len(xs)*4):
         shapes.append(ROOT.TGraph())
     for shape in shapes:
@@ -109,10 +113,10 @@ def SFComp(WP, SFs, Stat, Sysup, Sysdown):
     bin_center = array('f',bin_center)
     bin_size = array('f',bin_size) 
 
-    print xs
-    print ys
+    #print xs
+    #print ys
     #print exl, exr
-    print eyu, eyd
+    #print eyu, eyd
 
     # Style
     gROOT.SetBatch()    
@@ -140,8 +144,8 @@ def SFComp(WP, SFs, Stat, Sysup, Sysdown):
     plot.SetTitle("")
     plot.GetXaxis().SetMoreLogLabels()
     plot.GetXaxis().SetNoExponent()
-    plot.SetMinimum(0.7)
-    plot.SetMaximum(1.3)
+    plot.SetMinimum(0.6)
+    plot.SetMaximum(1.4)
     plot.GetXaxis().SetTitle("p_{T} [GeV]")
     plot.GetYaxis().SetTitle("SF_{double b}")
 
@@ -176,6 +180,10 @@ def SFComp(WP, SFs, Stat, Sysup, Sysdown):
 
     c1.Print("pics/SFComp_cMVAv2"+WP+".png")    
     c1.Clear()  
+
+    #WP, SFs, Stat, Sysup, Sysdown
+    for bin in range(len(SFs)):
+        print WP, "bin", bin,  SFs[bin], "+/-", np.sqrt(Stat[bin]**2+Sysup[bin]**2), "/", np.sqrt(Stat[bin]**2+Sysdown[bin]**2)
 
 
 def set_style():
@@ -270,14 +278,27 @@ if __name__ == "__main__":
     
     """
     # Full (almost) dataset
+    """
     BL = ['L', [1.0, 0.97999999999999998, 1.01], [0.017000000000000001, 0.027, 0.021999999999999999], [0.057000000000000002, 0.109, 0.021999999999999999], [0.033000000000000002, 0.032000000000000001, 0.059999999999999998]]
 
     BM1 = ['M1', [0.96999999999999997, 0.95999999999999996, 0.96999999999999997], [0.019, 0.031, 0.025999999999999999], [0.029999999999999999, 0.023, 0.027], [0.025000000000000001, 0.02, 0.041000000000000002]]
 
-    BM2 = ['M2', [0.90000000000000002, 0.91000000000000003, 0.87], [0.028000000000000001, 0.042000000000000003, 0.031], [0.021000000000000001, 0.021999999999999999, 0.023], [0.027, 0.023, 0.045999999999999999]]
+    BM2 = ['M2', [0.90000000000000002, 0.900000000000000021000000000000003, 0.87], [0.028000000000000001, 0.042000000000000003, 0.031], [0.021000000000000001, 0.021999999999999999, 0.023], [0.027, 0.023, 0.045999999999999999]]
 
     BH = ['H', [0.83999999999999997, 0.83999999999999997, 0.78000000000000003], [0.024, 0.049000000000000002, 0.029999999999999999], [0.014999999999999999, 0.042000000000000003, 0.021999999999999999], [0.016, 0.039, 0.028000000000000001]]
-    
+    """
+    # SV some syst
+    BL = [['L', [0.95999999999999996, 1.05, 0.92000000000000004], [0.023, 0.051999999999999998, 0.035000000000000003], [0.0080000000000000002, 0.012999999999999999, 0.010999999999999999], [0.099000000000000005, 0.115, 0.127]]
+    BM1 = ['M1', [0.93000000000000005, 1.01, 0.83999999999999997], [0.025999999999999999, 0.053999999999999999, 0.045999999999999999], [0.041000000000000002, 0.051999999999999998, 0.10000000000000001], [0.012, 0.029999999999999999, 0.0050000000000000001]]
+    BM2 = ['M2', [0.84999999999999998, 0.93000000000000005, 0.78000000000000003], [0.027, 0.062, 0.048000000000000001], [0.010999999999999999, 0.017000000000000001, 0.023], [0.01, 0.019, 0.0060000000000000001]]
+    BH = ['T', [0.78000000000000003, 0.85999999999999999, 0.67000000000000004], [0.042000000000000003, 0.086999999999999994, 0.048000000000000001], [0.012999999999999999, 0.032000000000000001, 0.014999999999999999], [0.014, 0.028000000000000001, 0.0060000000000000001]]
+
     #SFComp("T", SFs, Stat, Sysup, Sysdown)
     for lis in [BL, BM1, BM2, BH]:
         SFComp(lis[0], lis[1], lis[2], lis[3], lis[4])
+        for i, p in enumerate(["250-350","350-430","430-840"]):
+            #a,b,c = lis[0], lis[1][i], "+/-", np.sqrt(lis[2][i]**2+lis[3][i]**2), "/", np.sqrt(lis[2][i]**2+lis[4][i]**2)
+            a,b,c = lis[1][i], np.sqrt(lis[2][i]**2+lis[3][i]**2), np.sqrt(lis[2][i]**2+lis[4][i]**2)
+            print "|||||"+ p+" |"+str(round(a,2)) +"&plusmn;"+str(round(b,2))+"/"+str(round(c,2))+"|"
+    	
+
