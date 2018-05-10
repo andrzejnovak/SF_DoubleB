@@ -42,7 +42,7 @@ args = parser.parse_args()
 #r1 = 'normfile/'
 #r1 = 'singlefilenorm/'
 #r1 = 'April27single/'
-r1 = 'May8single/'
+r1 = 'May9single/'
 #r1 = 'April27forcenorm/'
 name1 = 'Run2017BCDEF_ReReco_QCDMuonEnriched_AK4DiJet170_Pt250_Final_DoubleMuonTaggedFatJets_histograms_btagval_allVars_ptReweighted_SysMerged_SFtemplates'
 name2 = 'Run2017BCDEF_ReReco_QCDMuonEnriched_AK8Jet300orAK4Jet300_Pt350_Final_DoubleMuonTaggedFatJets_histograms_btagval_allVars_ptReweighted_SysMerged_SFtemplates'
@@ -72,6 +72,7 @@ SF_dict_DoubleBM2 = copy.deepcopy(SF_dict_empty)
 SF_dict_DoubleBH = copy.deepcopy(SF_dict_empty)
 
 def step1(templates=templates, WP=WP):
+	M = []
 	glue=True; inclSYS=False
 	print WP
 	for n, template in enumerate(templates):		
@@ -83,18 +84,18 @@ def step1(templates=templates, WP=WP):
 				#file_name = r+name2+'pt250'+WP+root
 				file_name = r1+name1+"_"+WP+"_"+template+root
 				if WP == 'DoubleBH': 
-					SF = runSF_x(file_name, pt_bin, WP, merge=True, glue=glue, inclSYS=inclSYS)
+					SF, pars = runSF_x(file_name, pt_bin, WP, merge=True, glue=glue, inclSYS=inclSYS)
 				else:
-					SF = runSF_x(file_name, pt_bin, WP,  glue=glue, inclSYS=inclSYS)
+					SF, pars = runSF_x(file_name, pt_bin, WP,  glue=glue, inclSYS=inclSYS)
 			else:
 				file_name = r1+name2+"_"+WP+"_"+template+root			
-				SF = runSF_x(file_name, pt_bin, WP,  glue=glue, inclSYS=inclSYS)
+				SF, pars = runSF_x(file_name, pt_bin, WP,  glue=glue, inclSYS=inclSYS)
 			
 			print "		", SF	
 			print "		Time to run: ", np.round((time.time() - start)/60, 2), "min"
 
 			eval("SF_dict_"+WP+"['SF_'+template.replace('0p5', 'down').replace('1p5', 'up')].append(float("+str(SF)+"))")
-	return 
+	return M
 
 def step2(WP=WP):
 	bin_pars = []
@@ -200,7 +201,7 @@ if args.load:
 
 else:
 	#pass
-	#for WP in WPs: M = step1(WP=WP)
+	for WP in WPs: M = step1(WP=WP)
 	for WP in WPs: M = step2(WP=WP)
 	#for WP in WPs: M = step2_1(WP=WP)
 
