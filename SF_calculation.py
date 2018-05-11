@@ -43,6 +43,7 @@ args = parser.parse_args()
 #r1 = 'singlefilenorm/'
 #r1 = 'April27single/'
 r1 = 'May9single/'
+rjp = 'May9JPsingle/'
 #r1 = 'April27forcenorm/'
 name1 = 'Run2017BCDEF_ReReco_QCDMuonEnriched_AK4DiJet170_Pt250_Final_DoubleMuonTaggedFatJets_histograms_btagval_allVars_ptReweighted_SysMerged_SFtemplates'
 name2 = 'Run2017BCDEF_ReReco_QCDMuonEnriched_AK8Jet300orAK4Jet300_Pt350_Final_DoubleMuonTaggedFatJets_histograms_btagval_allVars_ptReweighted_SysMerged_SFtemplates'
@@ -79,17 +80,15 @@ def step1(templates=templates, WP=WP):
 		for m, pt_bin in enumerate(pt_bins):
 			start = time.time()
 			print WP, pt_bin, template
-			# Separate case for 250 pt file
+			merge=False
+			if WP == 'DoubleBM2' and m == 1: merge=True
+			if WP == 'DoubleBH' and m in [0,1]: merge=True
 			if m == 0: 
-				#file_name = r+name2+'pt250'+WP+root
 				file_name = r1+name1+"_"+WP+"_"+template+root
-				if WP == 'DoubleBH': 
-					SF, pars = runSF_x(file_name, pt_bin, WP, merge=True, glue=glue, inclSYS=inclSYS)
-				else:
-					SF, pars = runSF_x(file_name, pt_bin, WP,  glue=glue, inclSYS=inclSYS)
+				SF, pars = runSF_x(file_name, pt_bin, WP, merge=merge, glue=glue, inclSYS=inclSYS)
 			else:
 				file_name = r1+name2+"_"+WP+"_"+template+root			
-				SF, pars = runSF_x(file_name, pt_bin, WP,  glue=glue, inclSYS=inclSYS)
+				SF, pars = runSF_x(file_name, pt_bin, WP, merge=merge, glue=glue, inclSYS=inclSYS)
 			
 			print "		", SF	
 			print "		Time to run: ", np.round((time.time() - start)/60, 2), "min"
@@ -137,17 +136,17 @@ def step2_1(WP=WP):
 	for m, pt_bin in enumerate(pt_bins):
 		start = time.time()
 		print pt_bin
+		merge=False
+		if WP == 'DoubleBM2' and m == 1: merge=True
+		if WP == 'DoubleBH' and m in [0,1]: merge=True
+		if merge == True :print "MERGE"
 		if m == 0: 
-			#file_name = JP_r+"Run2017BCDEF_ReReco_QCDMuonEnriched_AK4DiJet170_Pt250_Final_DoubleMuonTaggedFatJets_histograms_btagval_v1_v2_ptReweighted_dataUseMCJPcalib_SysMerged_SFtemplates"+"_"+WP+root
-			file_name = JP_r+"Run2017BCDEF_ReReco_QCDMuonEnriched_AK4DiJet170_Pt250_Final_DoubleMuonTaggedFatJets_histograms_btagval_v1_v3_ptReweighted_dataUseMCJPcalib_SysMerged_SFtemplates"+"_"+WP+root
-			if WP == 'DoubleBH': 
-				SF = runSF_x(file_name, pt_bin, WP, merge=True,glue=glue, inclSYS=inclSYS)
-			else:
-				SF = runSF_x(file_name, pt_bin, WP, glue=glue, inclSYS=inclSYS)
+			file_name = rjp+"Run2017BCDEF_ReReco_QCDMuonEnriched_AK4DiJet170_Pt250_Final_DoubleMuonTaggedFatJets_histograms_btagval_allVars_ptReweighted_dataUseMCJPcalib_SysMerged_SFtemplates_"+WP+root
+			SF, pars = runSF_x(file_name, pt_bin, WP, merge=merge,glue=glue, inclSYS=inclSYS)
+			
 		else:
-			#file_name = JP_r+"Run2017BCDEF_ReReco_QCDMuonEnriched_AK8Jet300orAK4Jet300_Pt350_Final_DoubleMuonTaggedFatJets_histograms_btagval_v2_ptReweighted_dataUseMCJPcalib_SysMerged_SFtemplates"+"_"+WP+root
-			file_name = JP_r+"Run2017BCDEF_ReReco_QCDMuonEnriched_AK8Jet300orAK4Jet300_Pt350_Final_DoubleMuonTaggedFatJets_histograms_btagval_v3_ptReweighted_dataUseMCJPcalib_SysMerged_SFtemplates"+"_"+WP+root
-			SF = runSF_x(file_name, pt_bin, WP, glue=glue, inclSYS=inclSYS)
+			file_name = rjp+"Run2017BCDEF_ReReco_QCDMuonEnriched_AK8Jet300orAK4Jet300_Pt350_Final_DoubleMuonTaggedFatJets_histograms_btagval_allVars_ptReweighted_dataUseMCJPcalib_SysMerged_SFtemplates_"+WP+root
+			SF, pars = runSF_x(file_name, pt_bin, WP, merge=merge, glue=glue, inclSYS=inclSYS)
 		
 		print SF				
 		print "Time to run: ", np.round((time.time() - start)/60, 2), "min"
@@ -203,7 +202,7 @@ else:
 	#pass
 	for WP in WPs: M = step1(WP=WP)
 	for WP in WPs: M = step2(WP=WP)
-	#for WP in WPs: M = step2_1(WP=WP)
+	for WP in WPs: M = step2_1(WP=WP)
 
 for i in range(len(WPs)):
 	pprint(WP_dicts[i])
@@ -220,26 +219,26 @@ print WP_dicts
 bins = ["pt1", "pt2", "pt3"]
 headers = ["Systematic"]
 arrays = []
-for wp in WPs:
-	for pt in bins:
-		headers.append(wp[len("DoubleB"):]+pt)
-
 for WP, WP_dict in zip(WPs, WP_dicts): 
-	if WP != "DoubleBL": continue
+	#if WP != "DoubleBL": continue
 	SFs, sigma_stats, syst_ups, syst_downs, variances_names, errors_allpt, variances_allpt = step3(WP=WP, SF_dict=WP_dict)	
 	print [WP[len("DoubleB"):], SFs, sigma_stats, syst_ups, syst_downs]
 	
+	for pt in bins:
+		headers.append(WP[len("DoubleB"):]+pt)
+
 	names = variances_names
 	for ar in errors_allpt:
 		arrays.append(ar)
 		print ar
-
+		print len(names), len(ar)
 import csv
 from prettytable import PrettyTable
 f = open('Test.csv', 'w')
 writer = csv.writer(f, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL, lineterminator='\n')
 writer.writerow(headers)
 
+print headers
 t = PrettyTable(headers)
 for i in range(len(arrays[0])):
 	row = [names[i]]

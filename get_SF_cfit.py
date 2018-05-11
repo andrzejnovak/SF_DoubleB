@@ -346,16 +346,16 @@ def runSF_x(file, pt, wp, merge=False, glue=True, inclSYS=True, SF_dict={}, SV=T
 
 		# Calculate statistical errs
 		stat_SFs = []
-		for i in range(20):
+		for i in range(100):
 			if not SV:
 				SF_stat_i, pars = getSF(cf, tempNs, sysVar="", statVar=667+i)
 			else:
-				SF_stat_i, pars = getSF(cfSV, tempNs, cfJPall=cf, cfJPtag=cfJPtag, sysVar="", statVar=667+i, SV=SV)
+				SF_stat_i, pars = getSF(cfSV, tempNs, cfJPall=cfJP, cfJPtag=cfJPtag, sysVar="", statVar=667+i, SV=SV)
 			stat_SFs.append(SF_stat_i)
 
-		sf_stat_mean = sum(stat_SFs)/20.
+		sf_stat_mean = sum(stat_SFs)/100.
 		for SF_i in stat_SFs:
-			sigma_stat += (sf_stat_mean - SF_i)**2/20.
+			sigma_stat += (sf_stat_mean - SF_i)**2/100.
 		sigma_stat = np.sqrt(sigma_stat);
 
 		# 100 -105 systematics missing
@@ -364,30 +364,30 @@ def runSF_x(file, pt, wp, merge=False, glue=True, inclSYS=True, SF_dict={}, SV=T
 				cf.ProducePlots(False)
 				cf.SetMatrixOption("WRITE")
 	
-			if i == 100: cf.SetOptimization(OPT_NOCORR);
-			if i == 101: cf.SetMorphing(OPTMORPH_CUTOFF,0.25);
-			if i == 102: cf.SetMorphing(OPTMORPH_CUTOFF,0.75);
-			if i == 103: cf.SetMorphing(OPTMORPH_GEOMETRIC);
-			if i == 104:
-				continue
-				cf = cfit("")
-				cf.SetVerbose(0)
-				cf.ProducePlots(False)
-				cf.SetOptimization(OPT_MORPH_SGN_SIGMA)
-				cf.SetCovarianceMode(COV_MAX)
-				cf.SetMorphing(OPTMORPH_CUTOFF,0.5)
-			    			     
-				cf.SetInputFile(file)
-		   
-				mname = "matrix_"+pt;
-				cf.SetMatrixName(mname)
-				cf.SetMatrixOption("WRITE")
+				if i == 100: cf.SetOptimization(OPT_NOCORR);
+				if i == 101: cf.SetMorphing(OPTMORPH_CUTOFF,0.25);
+				if i == 102: cf.SetMorphing(OPTMORPH_CUTOFF,0.75);
+				if i == 103: cf.SetMorphing(OPTMORPH_GEOMETRIC);
+				if i == 104:
+					#continue
+					cf = cfit("")
+					cf.SetVerbose(0)
+					cf.ProducePlots(False)
+					cf.SetOptimization(OPT_MORPH_SGN_SIGMA)
+					cf.SetCovarianceMode(COV_MAX)
+					cf.SetMorphing(OPTMORPH_CUTOFF,0.5)
+				    			     
+					cf.SetInputFile(file)
+			   
+					mname = "matrix_"+pt;
+					cf.SetMatrixName(mname)
+					cf.SetMatrixOption("WRITE")
 
-				#cf.SetData(hname_data)   
-				#cf.SetDataTag(hname_data_tag)
-				#cf.SetDataUntag(hname_data_untag)
+					#cf.SetData(hname_data)   
+					#cf.SetDataTag(hname_data_tag)
+					#cf.SetDataUntag(hname_data_untag)
 
-				#add_templates(cf, glue, merge)
+					#add_templates(cf, glue, merge)
 
 			if not SV:
 				SF_sys2_i = getSF(cf, tempNs, sysVar="", statVar=-1)
