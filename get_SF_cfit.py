@@ -32,8 +32,8 @@ def runSF_x(file, pt, wp, merge=False, glue=True, inclSYS=True, SF_dict={}, SV=T
 	
 
 	if inclSYS:
-		#systlist = ["JES", "NTRACKS", "BFRAG", "CFRAG", "CD", "K0L", "PU"]
-		systlist = ["JES",  "BFRAG", "CFRAG", "CD", "K0L", "PU"]
+		systlist = ["JES", "NTRACKS", "BFRAG", "CFRAG", "CD", "K0L", "PU"]
+		#systlist = ["JES",  "BFRAG", "CFRAG", "CD", "K0L", "PU"]
 		for sysName in systlist:
 			# Flipped down up in Alice's code
 			#pass
@@ -401,8 +401,10 @@ def runSF_x(file, pt, wp, merge=False, glue=True, inclSYS=True, SF_dict={}, SV=T
 			errors.append(delta)
 			variances_names.append("Morph"+str(i))
 			print SF_sys2_i, delta
-			sigma_syst_up += sigma2
-			sigma_syst_down += sigma2
+			if SF < SF_sys2_i:
+				sigma_syst_up += sigma2
+			else:
+				sigma_syst_down += sigma2
 
 		# Calculate systematics 2
 		"""for SF_i in SF_list:
@@ -417,6 +419,7 @@ def runSF_x(file, pt, wp, merge=False, glue=True, inclSYS=True, SF_dict={}, SV=T
 			if SF_dict[SF_i] == []: continue
 			error = SF - SF_dict[SF_i][pt_bin]
 			sigma2 = error**2
+			print  SF_i, error
 			if SF < SF_dict[SF_i][pt_bin]:
 				sigma_syst_up += sigma2
 			else:

@@ -130,7 +130,7 @@ def step2(WP=WP):
 
 
 def step2_1(WP=WP):
-	glue=False;  inclSYS=False
+	glue=True;  inclSYS=False
 	M = []
 	print WP
 	for m, pt_bin in enumerate(pt_bins):
@@ -162,7 +162,7 @@ def step3(WP=WP, SF_dict=SF_dict_empty):
 		start = time.time()
 		print m, pt_bin
 		merge = False
-		if WP == 'DoubleBM2' and m == 1: merge=True
+		if WP == 'DoubleBM2' and m in [0,1]: merge=True
 		if WP == 'DoubleBH' and m in [0,1]: merge=True
 		if merge == True :print "MERGE"
 		if m == 0: 
@@ -192,12 +192,22 @@ WP_dicts = [SF_dict_DoubleBL, SF_dict_DoubleBM1, SF_dict_DoubleBM2, SF_dict_Doub
 
 import shelve
 if args.load:
-	WP_dicts = []
-	shelf = shelve.open("temp.shlf", flag='r')
-	for key in shelf.keys():
-	    WP_dicts.append(shelf[key])
-	shelf.close()
+	#WP_dicts = []
+	#shelf = shelve.open("temp.shlf", flag='r')
+	#for key in shelf.keys():
+	#    WP_dicts.append(shelf[key])
+	#shelf.close()
 
+	with open('pkl1.pkl', 'r') as f:
+	    SF_dict_DoubleBL = pickle.load(f)
+	with open('pkl2.pkl', 'r') as f:
+	    SF_dict_DoubleBM1 = pickle.load(f)
+	with open('pkl3.pkl', 'r') as f:
+	    SF_dict_DoubleBM2 = pickle.load(f)
+	with open('pkl4.pkl', 'r') as f:
+	    SF_dict_DoubleBH = pickle.load(f)
+
+	WP_dicts = [SF_dict_DoubleBL, SF_dict_DoubleBM1, SF_dict_DoubleBM2, SF_dict_DoubleBH]
 else:
 	#pass
 	for WP in WPs: M = step1(WP=WP)
@@ -208,10 +218,20 @@ for i in range(len(WPs)):
 	pprint(WP_dicts[i])
 
 
-shelf = shelve.open("temp.shlf", flag="c")
-for i in range(len(WPs)):
-	shelf[WPs[i]] = WP_dicts[i]
-shelf.close()
+#shelf = shelve.open("temp.shlf", flag="c")
+#for i in range(len(WPs)):
+#	shelf[WPs[i]] = WP_dicts[i]
+#shelf.close()
+import pickle
+with open('pkl1.pkl', 'w') as f:
+    pickle.dump(SF_dict_DoubleBL, f)
+with open('pkl2.pkl', 'w') as f:
+    pickle.dump(SF_dict_DoubleBM1, f)
+with open('pkl3.pkl', 'w') as f:
+    pickle.dump(SF_dict_DoubleBM2, f)
+with open('pkl4.pkl', 'w') as f:
+    pickle.dump(SF_dict_DoubleBH, f)
+
 
 
 print WP_dicts
