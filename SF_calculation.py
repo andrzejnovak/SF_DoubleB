@@ -71,7 +71,29 @@ SF_dict_DoubleBL = copy.deepcopy(SF_dict_empty)
 SF_dict_DoubleBM1 = copy.deepcopy(SF_dict_empty)
 SF_dict_DoubleBM2 = copy.deepcopy(SF_dict_empty)
 SF_dict_DoubleBH = copy.deepcopy(SF_dict_empty)
-
+"""
+def step0(WP=WP):
+	bin_pars = []
+	bin_nams = []
+	glue=True;  inclSYS=True
+	M = []
+	print WP
+	for m, pt_bin in enumerate(pt_bins):
+		start = time.time()
+		print pt_bin
+		merge=False
+		if WP == 'DoubleBM2' and m == 1: merge=True
+		if WP == 'DoubleBH' and m in [0,1]: merge=True
+		if merge == True :print "MERGE"
+		if m == 0: 
+			file_name = r1+name1+"_"+WP+root
+			SF, pars = runSF_x(file_name, pt_bin, WP, merge=merge, glue=glue, inclSYS=inclSYS)		
+		else: 
+			file_name = r1+name2+"_"+WP+root
+			SF, pars = runSF_x(file_name, pt_bin, WP, merge=merge, glue=glue, inclSYS=inclSYS)
+		
+		print "Nominal, no syst SF:", SF
+"""
 def step1(templates=templates, WP=WP):
 	M = []
 	glue=True; inclSYS=False
@@ -160,7 +182,7 @@ def step3(WP=WP, SF_dict=SF_dict_empty):
 	errors_all, variances_all = [], []
 	for m, pt_bin in enumerate(pt_bins):
 		start = time.time()
-		print m, pt_bin
+		print WP, m, pt_bin
 		merge = False
 		if WP == 'DoubleBM2' and m in [0,1]: merge=True
 		if WP == 'DoubleBH' and m in [0,1]: merge=True
@@ -208,8 +230,10 @@ if args.load:
 	    SF_dict_DoubleBH = pickle.load(f)
 
 	WP_dicts = [SF_dict_DoubleBL, SF_dict_DoubleBM1, SF_dict_DoubleBM2, SF_dict_DoubleBH]
+
 else:
 	#pass
+	#for WP in WPs: M = step0(WP=WP)
 	for WP in WPs: M = step1(WP=WP)
 	for WP in WPs: M = step2(WP=WP)
 	for WP in WPs: M = step2_1(WP=WP)
@@ -239,10 +263,13 @@ print WP_dicts
 bins = ["pt1", "pt2", "pt3"]
 headers = ["Systematic"]
 arrays = []
+reprint = []
 for WP, WP_dict in zip(WPs, WP_dicts): 
-	#if WP != "DoubleBL": continue
+	#if WP == "DoubleBH": continue
+	#if WP == "DoubleBM2": continue
 	SFs, sigma_stats, syst_ups, syst_downs, variances_names, errors_allpt, variances_allpt = step3(WP=WP, SF_dict=WP_dict)	
 	print [WP[len("DoubleB"):], SFs, sigma_stats, syst_ups, syst_downs]
+	reprint.append([WP[len("DoubleB"):], SFs, sigma_stats, syst_ups, syst_downs])
 	
 	for pt in bins:
 		headers.append(WP[len("DoubleB"):]+pt)
@@ -252,6 +279,9 @@ for WP, WP_dict in zip(WPs, WP_dicts):
 		arrays.append(ar)
 		print ar
 		print len(names), len(ar)
+for row in reprint:
+	print row
+
 import csv
 from prettytable import PrettyTable
 f = open('Test.csv', 'w')
@@ -275,3 +305,5 @@ f.close()
 table_txt = t.get_string()
 with open('Test.txt','w') as file:
     file.write(table_txt)
+
+

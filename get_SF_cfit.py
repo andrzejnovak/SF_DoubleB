@@ -33,14 +33,16 @@ def runSF_x(file, pt, wp, merge=False, glue=True, inclSYS=True, SF_dict={}, SV=T
 
 	if inclSYS:
 		systlist = ["JES", "NTRACKS", "BFRAG", "CFRAG", "CD", "K0L", "PU"]
-		#systlist = ["JES",  "BFRAG", "CFRAG", "CD", "K0L", "PU"]
+		#systlist = ["JES", "BFRAG", "CD", "K0L", "PU"]
 		for sysName in systlist:
 			# Flipped down up in Alice's code
 			#pass
-			cfJP.AddSys(sysName, "_"+sysName+"down" ,"_"+sysName+"up")
-			cfSV.AddSys(sysName, "_"+sysName+"down" ,"_"+sysName+"up")
-			cfJPtag.AddSys(sysName, "_"+sysName+"down" ,"_"+sysName+"up")
-			#cf.AddSys(sysName, "_"+sysName+"up" ,"_"+sysName+"down") #-- this one is correct
+			#cfJP.AddSys(sysName, "_"+sysName+"down" ,"_"+sysName+"up")
+			#cfSV.AddSys(sysName, "_"+sysName+"down" ,"_"+sysName+"up")
+			#cfJPtag.AddSys(sysName, "_"+sysName+"down" ,"_"+sysName+"up")
+			cfJP.AddSys(sysName, "_"+sysName+"up" ,"_"+sysName+"down") #-- this one is correct
+			cfSV.AddSys(sysName, "_"+sysName+"up" ,"_"+sysName+"down") #-- this one is correct
+			cfJPtag.AddSys(sysName, "_"+sysName+"up" ,"_"+sysName+"down") #-- this one is correct
 
 	# Mergning for low count templates:
 	if merge: tempNs = ["g #rightarrow b#bar{b}", "b + g #rightarrow c#bar{c}", "c + dusg"]
@@ -123,8 +125,11 @@ def runSF_x(file, pt, wp, merge=False, glue=True, inclSYS=True, SF_dict={}, SV=T
 			cf.AddTemplate(tempNs[0], hists_nom[0]	,65)
 			cf.AddTemplate(tempNs[1], hists_nom[5],628)
 			cf.AddTemplate(tempNs[2], hists_nom[6],	597)
-			if glue and SV:
-				cf.GlueTemplates(tempNs[1:],"other flavours",28);
+			if glue:
+				if not SV:
+					pass 
+				else:
+					cf.GlueTemplates(tempNs[1:],"other flavours",28);
 		else:
 			cf.AddTemplate(tempNs[0], hists_nom[0],	65)
 			cf.AddTemplate(tempNs[1], hists_nom[1],		213)
@@ -142,8 +147,11 @@ def runSF_x(file, pt, wp, merge=False, glue=True, inclSYS=True, SF_dict={}, SV=T
 			cf.AddTemplateTag(tempNs[0], hists_tag[0],		 65)
 			cf.AddTemplateTag(tempNs[1], hists_tag[5], 		628)
 			cf.AddTemplateTag(tempNs[2], hists_tag[6], 		597)
-			if glue and SV:
-				cf.GlueTemplatesTag(tempNs[1:],"other flavours",28);
+			if glue:
+				if not SV:
+					pass
+				else:
+					cf.GlueTemplatesTag(tempNs[1:],"other flavours",28);
 		else:
 			cf.AddTemplateTag(tempNs[0], hists_tag[0],		65)
 			cf.AddTemplateTag(tempNs[1], hists_tag[1],		213)
@@ -172,6 +180,7 @@ def runSF_x(file, pt, wp, merge=False, glue=True, inclSYS=True, SF_dict={}, SV=T
 		#add_templates(cf, glue, merge, var="JP")
 		pass
 	else:
+		print "SV method"
 		add_templates(cfSV, glue, merge, SV=False, var="tau1VertexMassCorr")
 		add_templates(cfJP, glue, merge, var="JP", SV=True, tag=False)
 		add_templates(cfJPtag, glue, merge, var="JP", SV=True, tag=True)
@@ -307,7 +316,7 @@ def runSF_x(file, pt, wp, merge=False, glue=True, inclSYS=True, SF_dict={}, SV=T
 
 	#if inclSYS==False:
 	if not SV:
-		SF = getSF(cf, tempNs, sysVar="", SV=False)
+		SF = getSF(cfJP, tempNs, sysVar="", SV=False)
 	else:
 		SF, pars = getSF(cfSV, tempNs, cfJPall=cfJP, cfJPtag=cfJPtag, sysVar="", SV=SV)
 	print "SF =", SF
@@ -331,7 +340,7 @@ def runSF_x(file, pt, wp, merge=False, glue=True, inclSYS=True, SF_dict={}, SV=T
 		
 		for i, sysVar in enumerate(systVarlist):
 			if not SV:
-				SF_sys_i = getSF(cf, tempNs, sysVar=sysVar)
+				SF_sys_i = getSF(cfJP, tempNs, sysVar=sysVar)
 			else:
 				SF_sys_i, pars = getSF(cfSV, tempNs, cfJPall=cfJP, cfJPtag=cfJPtag, sysVar=sysVar, SV=SV)
 			print "SF", sysVar, SF, SF_sys_i, (SF - SF_sys_i)**2
@@ -390,7 +399,7 @@ def runSF_x(file, pt, wp, merge=False, glue=True, inclSYS=True, SF_dict={}, SV=T
 					#add_templates(cf, glue, merge)
 
 			if not SV:
-				SF_sys2_i = getSF(cf, tempNs, sysVar="", statVar=-1)
+				SF_sys2_i = getSF(cfJP, tempNs, sysVar="", statVar=-1)
 			else:
 				SF_sys2_i, par = getSF(cfSV, tempNs, cfJPall=cfJP, cfJPtag=cfJPtag, sysVar="", statVar=-1, SV=SV)
 			cf.SetOptimization(OPT_MORPH_SGN_SIGMA)
