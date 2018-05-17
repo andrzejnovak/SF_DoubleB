@@ -71,11 +71,11 @@ SF_dict_DoubleBL = copy.deepcopy(SF_dict_empty)
 SF_dict_DoubleBM1 = copy.deepcopy(SF_dict_empty)
 SF_dict_DoubleBM2 = copy.deepcopy(SF_dict_empty)
 SF_dict_DoubleBH = copy.deepcopy(SF_dict_empty)
-"""
+
 def step0(WP=WP):
 	bin_pars = []
 	bin_nams = []
-	glue=True;  inclSYS=True
+	glue=True;  inclSYS=False
 	M = []
 	print WP
 	for m, pt_bin in enumerate(pt_bins):
@@ -93,7 +93,7 @@ def step0(WP=WP):
 			SF, pars = runSF_x(file_name, pt_bin, WP, merge=merge, glue=glue, inclSYS=inclSYS)
 		
 		print "Nominal, no syst SF:", SF
-"""
+
 def step1(templates=templates, WP=WP):
 	M = []
 	glue=True; inclSYS=False
@@ -164,11 +164,11 @@ def step2_1(WP=WP):
 		if merge == True :print "MERGE"
 		if m == 0: 
 			file_name = rjp+"Run2017BCDEF_ReReco_QCDMuonEnriched_AK4DiJet170_Pt250_Final_DoubleMuonTaggedFatJets_histograms_btagval_allVars_ptReweighted_dataUseMCJPcalib_SysMerged_SFtemplates_"+WP+root
-			SF, pars = runSF_x(file_name, pt_bin, WP, merge=merge,glue=glue, inclSYS=inclSYS)
+			SF, pars = runSF_x(file_name, pt_bin, WP, merge=merge,glue=glue, inclSYS=inclSYS, noSYS=True)
 			
 		else:
 			file_name = rjp+"Run2017BCDEF_ReReco_QCDMuonEnriched_AK8Jet300orAK4Jet300_Pt350_Final_DoubleMuonTaggedFatJets_histograms_btagval_allVars_ptReweighted_dataUseMCJPcalib_SysMerged_SFtemplates_"+WP+root
-			SF, pars = runSF_x(file_name, pt_bin, WP, merge=merge, glue=glue, inclSYS=inclSYS)
+			SF, pars = runSF_x(file_name, pt_bin, WP, merge=merge, glue=glue, inclSYS=inclSYS, noSYS=True)
 		
 		print SF				
 		print "Time to run: ", np.round((time.time() - start)/60, 2), "min"

@@ -2,7 +2,7 @@
 from cfit import *
 import numpy as np
 
-def runSF_x(file, pt, wp, merge=False, glue=True, inclSYS=True, SF_dict={}, SV=True):
+def runSF_x(file, pt, wp, merge=False, glue=True, inclSYS=True, SF_dict={}, SV=True, noSYS=False):
 	N_digits_SF = 3
 	N_digits_err = 4
 	if pt == "pt250to350": pt_bin = 0
@@ -31,18 +31,21 @@ def runSF_x(file, pt, wp, merge=False, glue=True, inclSYS=True, SF_dict={}, SV=T
 		cf.SetInputFile(file)
 	
 
-	if inclSYS:
+	#if inclSYS:
+	if not noSYS:
 		systlist = ["JES", "NTRACKS", "BFRAG", "CFRAG", "CD", "K0L", "PU"]
-		#systlist = ["JES", "BFRAG", "CD", "K0L", "PU"]
+		#systlist = ["JES", "NTRACKS", "BFRAG", "CFRAG"]
 		for sysName in systlist:
+			for cf in [cfJP, cfSV, cfJPtag]:
+				cf.AddSys(sysName, "_"+sysName+"up" ,"_"+sysName+"down")
 			# Flipped down up in Alice's code
 			#pass
 			#cfJP.AddSys(sysName, "_"+sysName+"down" ,"_"+sysName+"up")
 			#cfSV.AddSys(sysName, "_"+sysName+"down" ,"_"+sysName+"up")
 			#cfJPtag.AddSys(sysName, "_"+sysName+"down" ,"_"+sysName+"up")
-			cfJP.AddSys(sysName, "_"+sysName+"up" ,"_"+sysName+"down") #-- this one is correct
-			cfSV.AddSys(sysName, "_"+sysName+"up" ,"_"+sysName+"down") #-- this one is correct
-			cfJPtag.AddSys(sysName, "_"+sysName+"up" ,"_"+sysName+"down") #-- this one is correct
+			#cfJP.AddSys(sysName, "_"+sysName+"up" ,"_"+sysName+"down") #-- this one is correct
+			#cfSV.AddSys(sysName, "_"+sysName+"up" ,"_"+sysName+"down") #-- this one is correct
+			#cfJPtag.AddSys(sysName, "_"+sysName+"up" ,"_"+sysName+"down") #-- this one is correct
 
 	# Mergning for low count templates:
 	if merge: tempNs = ["g #rightarrow b#bar{b}", "b + g #rightarrow c#bar{c}", "c + dusg"]
@@ -130,6 +133,7 @@ def runSF_x(file, pt, wp, merge=False, glue=True, inclSYS=True, SF_dict={}, SV=T
 					pass 
 				else:
 					cf.GlueTemplates(tempNs[1:],"other flavours",28);
+				print "Merge happend"
 		else:
 			cf.AddTemplate(tempNs[0], hists_nom[0],	65)
 			cf.AddTemplate(tempNs[1], hists_nom[1],		213)
@@ -142,6 +146,7 @@ def runSF_x(file, pt, wp, merge=False, glue=True, inclSYS=True, SF_dict={}, SV=T
 					cf.GlueTemplates([tempNs[3], tempNs[4]],"c + dusg",597)
 				else:
 					cf.GlueTemplates(tempNs[1:],"other flavours",28);
+				print "No Merge "
 
 		if merge:
 			cf.AddTemplateTag(tempNs[0], hists_tag[0],		 65)
@@ -259,6 +264,7 @@ def runSF_x(file, pt, wp, merge=False, glue=True, inclSYS=True, SF_dict={}, SV=T
 			#CFJP		
 			#print "Fitting JPall"
 			nmc1, nmc, nmc1_tag, nmc_tag, par, par_tag = getpars(cfJPall, tempNs, sysVar, statVar)
+			
 			#ndata1 = nmc1*par			 
 			#nmc1_SV = nmc1_tag
 			#ndata1_SV = nmc1_SV*par_tag
@@ -269,6 +275,7 @@ def runSF_x(file, pt, wp, merge=False, glue=True, inclSYS=True, SF_dict={}, SV=T
 			
 			#print "Fitting JPtagged" 
 			nmc1_tagged, nmc, nmc1_tagged_SV, nmc_tag, parJPtagged, par_tagJPtagged = getpars(cfJPtag, tempNs, sysVar, statVar)			  
+			
 			#ndata1_tagged = nmc1_tagged*parJPtagged		   
 			#ndata1_tagged_SV = nmc1_tagged_SV*par_tagJPtagged
 			#effMC_SV_tagged = nmc1_tagged_SV/nmc1_tagged;
@@ -319,7 +326,8 @@ def runSF_x(file, pt, wp, merge=False, glue=True, inclSYS=True, SF_dict={}, SV=T
 		SF = getSF(cfJP, tempNs, sysVar="", SV=False)
 	else:
 		SF, pars = getSF(cfSV, tempNs, cfJPall=cfJP, cfJPtag=cfJPtag, sysVar="", SV=SV)
-	print "SF =", SF
+	print "SF =", SF, "SF(SV only) =", pars[-1]/pars[-2] ,"EffJP =", pars[0]/pars[1], "EffJPtag =", pars[2]/pars[3], "Multiplier =", pars[1]*pars[2]/(pars[3]*pars[0])
+
 
 	if inclSYS==True:
 		print "Calculating Errors"
