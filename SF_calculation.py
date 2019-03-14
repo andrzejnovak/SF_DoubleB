@@ -28,19 +28,24 @@ def make_dirs(dirname):
 # Specify bin and WP when to use merged templates, returns input to run_SF_x
 def when_to_merge(WP, bins, bin_idx):
 	print "NBINS: ", len(bins)
-	if len(bins) == 4:
-		if WP == 'DoubleBM2' and bin_idx in [1]: merge=2
-		elif WP == 'DoubleBM2' and bin_idx in [2]: merge=True
-		elif WP == 'DoubleBH' and bin_idx in [1]: merge=2
-		elif WP == 'DoubleBH' and bin_idx in [0]: merge=True
-		else: merge = False
+	merge = False
+	# if len(bins) == 4:
+	# 	if WP == 'DoubleBM2' and bin_idx in [1]: merge=2
+	# 	elif WP == 'DoubleBM2' and bin_idx in [2]: merge=True
+	# 	elif WP == 'DoubleBH' and bin_idx in [1]: merge=2
+	# 	elif WP == 'DoubleBH' and bin_idx in [0]: merge=True
+	# 	else: merge = False
+	# if len(bins) == 3:
+	# 	if WP == 'DoubleBM2' and bin_idx in [1]: merge=True
+	# 	elif WP == 'DoubleBH' and bin_idx in [0,1]: merge=True
+	# 	else: merge = False
+	# if len(bins) == 2:
+	# 	if WP == 'DoubleBM2' and bin_idx in []: merge=True
+	# 	elif WP == 'DoubleBH' and bin_idx in [0]: merge=True
+	# 	else: merge = False
 	if len(bins) == 3:
-		if WP == 'DoubleBM2' and bin_idx in [1]: merge=True
-		elif WP == 'DoubleBH' and bin_idx in [0,1]: merge=True
-		else: merge = False
-	if len(bins) == 2:
-		if WP == 'DoubleBM2' and bin_idx in []: merge=True
-		elif WP == 'DoubleBH' and bin_idx in [0]: merge=True
+		if WP == 'DeepDoubleXH' and bin_idx in [0]: merge=True
+		#elif WP == 'DoubleBH' and bin_idx in [0,1]: merge=True
 		else: merge = False
 
 	return merge
@@ -70,7 +75,12 @@ SF_dict_empty = {
 SF_dict_DoubleBL = copy.deepcopy(SF_dict_empty)
 SF_dict_DoubleBM1 = copy.deepcopy(SF_dict_empty)
 SF_dict_DoubleBM2 = copy.deepcopy(SF_dict_empty)
-SF_dict_DoubleBH = copy.deepcopy(SF_dict_empty)
+SF_dict_DoubleBT = copy.deepcopy(SF_dict_empty)
+SF_dict_DDBvLL = copy.deepcopy(SF_dict_empty)
+SF_dict_DDBvLM1 = copy.deepcopy(SF_dict_empty)
+SF_dict_DDBvLM2 = copy.deepcopy(SF_dict_empty)
+SF_dict_DDBvLT1 = copy.deepcopy(SF_dict_empty)
+SF_dict_DDBvLT2 = copy.deepcopy(SF_dict_empty)
 
 # Calculate up/down shape SFs and store to dictionary
 WP = "BL"
@@ -87,8 +97,10 @@ def step1(templates=templates, WP=WP):
 				file_name = r1+name1+"_"+WP+"_"+template+root
 				SF, pars, chi2 = runSF_x(file_name, pt_bins, m, WP, merge=merge, glue=glue,  addSYS=addSYS, calcSYS=calcSYS)
 			else:
-				file_name = r1+name2+"_"+WP+"_"+template+root			
-				SF, pars, chi2 = runSF_x(file_name, pt_bins, m, WP, merge=merge, glue=glue, addSYS=addSYS, calcSYS=calcSYS)
+				#file_name = r1+name2+"_"+WP+"_"+template+root			
+				file_name = "DeepDoubleX_PtMinIs350_plain_test_dataUseMCJPcalib_SysMerged_SFtemplates_DDX_H_WP.root"			
+				SF, pars, chi2 = runSF_x(file_name, pt_bins, m, WP, merge=merge, glue=glue, addSYS=addSYS, calcSYS=calcSYS, SV=False)
+				#SF, pars, chi2 = runSF_x(file_name, pt_bins, m, WP, merge=merge, glue=glue, addSYS=addSYS, calcSYS=calcSYS)
 			
 			print "		", SF	
 			print "		Time to run: ", np.round((time.time() - start)/60, 2), "min"
@@ -98,18 +110,24 @@ def step1(templates=templates, WP=WP):
 
 # Calculate systematic of fitting all tempaltes separately regardeless of similar shapes
 def step2(WP=WP):
-	glue=False; addSYS=True; calcSYS=False; 
+	#glue=False; addSYS=True; calcSYS=False; 
+	glue=True; addSYS=False; calcSYS=False; # just a quick test
+	SFs = [] # temp
 	for m, pt_bin in enumerate(pt_bins):
 		start = time.time()
 		print WP, pt_bin
 		merge=False
 		merge = when_to_merge(WP, pt_bins, m)
 		if int(pt_bin.split("to")[-1]) <= 350:
-			file_name = r1+name1+"_"+WP+root
-			SF, pars, chi2 = runSF_x(file_name, pt_bins, m, WP, merge=merge, glue=glue,  addSYS=addSYS, calcSYS=calcSYS)
+			#file_name = r+name1+WP+root
+			file_name = r+name1+root
+			# LTSVIs350_dataUseMCJPcalib_SysMerged_SFtemplates_DeepDoubleXH.root
+			SF, pars, chi2 = runSF_x(file_name, pt_bins, m, WP, merge=merge, glue=glue,  addSYS=addSYS, calcSYS=calcSYS, LTSV=False)
 		else: 
-			file_name = r1+name2+"_"+WP+root
-			SF, pars, chi2 = runSF_x(file_name, pt_bins, m, WP, merge=merge, glue=glue,  addSYS=addSYS, calcSYS=calcSYS)
+			#file_name = r+name2+WP+root
+			file_name = r+name2+root
+			print file_name
+			SF, pars, chi2 = runSF_x(file_name, pt_bins, m, WP, merge=merge, glue=glue,  addSYS=addSYS, calcSYS=calcSYS, LTSV=False)
 		
 		print "		", SF	
 		print "      Time to run: ", np.round((time.time() - start)/60, 2), "min"
@@ -117,6 +135,8 @@ def step2(WP=WP):
 		#os.system('cp -r pics/* results5temp/'+str(WP)+str(pt_bin))
 
 		eval("SF_dict_"+WP+"['SF_5_temp'].append(float("+str(SF)+"))")
+		SFs.append(SF)
+	return SFs
 
 # Calculate MCJP Calib - different input files, data is modified
 def step2_1(WP=WP):
@@ -181,16 +201,29 @@ name1 = 'Run2017BCDEF_ReReco_QCDMuonEnriched_AK4DiJet170_Pt250_Final_DoubleMuonT
 name2 = 'Run2017BCDEF_ReReco_QCDMuonEnriched_AK8Jet300orAK4Jet300_Pt350_Final_DoubleMuonTaggedFatJets_histograms_btagval_allVars_ptReweighted_SysMerged_SFtemplates'
 WP = "BL"
 root = '.root'
+r = 'March19/'
+#name1 = "LTSVIs250to350_dataUseMCJPcalib_SysMerged_SFtemplates_"
+#name2 = "LTSVIs350_dataUseMCJPcalib_SysMerged_SFtemplates_"
+
+#name2 = "collatedDDBvL"
+#name2 = "collatedDDBvLv3"
+#name2 = "collatedv3"
+name2 = "collatedDoubleBsmall"
+
 
 # Specify binning
 #pt_bins = ['pt250to350', 'pt350to430', 'pt430to2000']
 #pt_bins = ['pt250to300', 'pt300to350',  'pt350to450', 'pt450to2000']
 #pt_bins = ['pt250to350', 'pt350to450', 'pt450to2000']
-pt_bins = ['pt250to350', 'pt350to2000']
+#pt_bins = ['pt250to350', 'pt350to2000']
+#pt_bins = ['pt250to350','pt350to430', 'pt430to2000']
+pt_bins = ['pt350to430', 'pt430to2000']
 
 # Specify WPs to run
-WPs = ['DoubleBL', 'DoubleBM1', 'DoubleBM2', 'DoubleBH']
-WP_dicts = [SF_dict_DoubleBL, SF_dict_DoubleBM1, SF_dict_DoubleBM2, SF_dict_DoubleBH]
+WPs = ['DoubleBL', 'DoubleBM1', 'DoubleBM2', 'DoubleBT']
+#WPs = ['DDBvLL','DDBvLM1', 'DDBvLM2', 'DDBvLT1', 'DDBvLT2']
+WP_dicts = [SF_dict_DoubleBL, SF_dict_DoubleBM1, SF_dict_DoubleBM2, SF_dict_DoubleBT]
+#WP_dicts = [SF_dict_DDBvLL,SF_dict_DDBvLM1,SF_dict_DDBvLM2,SF_dict_DDBvLT1,SF_dict_DDBvLT2 ]
 
 # Load intermediate results - steps: 1,2, 2_1
 if args.load:
@@ -201,15 +234,18 @@ if args.load:
 	with open('pkl3.pkl', 'r') as f:
 	    SF_dict_DoubleBM2 = pickle.load(f)
 	with open('pkl4.pkl', 'r') as f:
-	    SF_dict_DoubleBH = pickle.load(f)
+	    SF_dict_DoubleBT = pickle.load(f)
 
-	WP_dicts = [SF_dict_DoubleBL, SF_dict_DoubleBM1, SF_dict_DoubleBM2, SF_dict_DoubleBH]
+	WP_dicts = [SF_dict_DoubleBL, SF_dict_DoubleBM1, SF_dict_DoubleBM2, SF_dict_DoubleBT]
 
 # If running from start - run all pre SFs
 else:
-	for WP in WPs: M = step1(WP=WP)
-	for WP in WPs: M = step2(WP=WP)
-	for WP in WPs: M = step2_1(WP=WP)
+	pass
+	#for WP in WPs: M = step2(WP=WP)
+	#sys.exit()
+	#for WP in WPs: M = step1(WP=WP)
+	#for WP in WPs: M = step2(WP=WP)
+	#for WP in WPs: M = step2_1(WP=WP)
 
 
 with open('pkl1.pkl', 'w') as f:
@@ -219,7 +255,7 @@ with open('pkl2.pkl', 'w') as f:
 with open('pkl3.pkl', 'w') as f:
     pickle.dump(SF_dict_DoubleBM2, f)
 with open('pkl4.pkl', 'w') as f:
-    pickle.dump(SF_dict_DoubleBH, f)
+    pickle.dump(SF_dict_DoubleBT, f)
 
 
 # Run final SF calculation
@@ -228,28 +264,33 @@ arrays = []
 reprint = []
 parinfo = []
 for WP, WP_dict in zip(WPs, WP_dicts): 
-	SFs, sigma_stats, syst_ups, syst_downs, variances_names, errors_allpt, variances_allpt, SF_SV, preeff, tageff = step3(WP=WP, SF_dict=WP_dict)	
+	print WP
+	#SFs, sigma_stats, syst_ups, syst_downs, variances_names, errors_allpt, variances_allpt, SF_SV, preeff, tageff = step3(WP=WP, SF_dict=WP_dict)	
+	SFs, sigma_stats, syst_ups, syst_downs, SF_SV, preeff, tageff = [0]*len(pt_bins), [0]*len(pt_bins), [0]*len(pt_bins),[0]*len(pt_bins), [0]*len(pt_bins), [0]*len(pt_bins), [0]*len(pt_bins) # temp
+	SFs = step2(WP=WP) # temp 
 	
 
-	reprint.append([WP[len("DoubleB"):], SFs, sigma_stats, syst_ups, syst_downs, SF_SV, preeff, tageff])
+	#reprint.append([WP[len("DoubleB"):], SFs, sigma_stats, syst_ups, syst_downs, SF_SV, preeff, tageff])
+	reprint.append([WP[len("DeepDoubleX"):], SFs, sigma_stats, syst_ups, syst_downs, SF_SV, preeff, tageff])
 	for pt in pt_bins:
-		headers.append(WP[len("DoubleB"):]+pt)
+		#headers.append(WP[len("DoubleB"):]+pt)
+		headers.append(WP[len("DeepDoubleX"):]+pt)
 
-	names = variances_names
-	for ar in errors_allpt:
-		arrays.append(ar)
+	#names = variances_names
+	#for ar in errors_allpt:
+	#	arrays.append(ar)
 
 # Store outputs in data frames
 results = []
 for row in reprint:
 	results.append(np.array(row[1:]))
 
-df = pd.DataFrame(np.array(arrays).transpose(), columns=headers[1:], index=names)
-print df
+#df = pd.DataFrame(np.array(arrays).transpose(), columns=headers[1:], index=names)
+#print df
 df2 = pd.DataFrame(np.concatenate((results), axis=1), columns=headers[1:], index=['SF', 'Stat', 'Sys up', 'Sys down', 'SF_SV', 'preeff', 'tageff'] )
 df2.loc['Combined up'] = np.sqrt(df2.loc['Stat'].values**2 + df2.loc['Sys up'].values**2)
 df2.loc['Combined down'] = np.sqrt(df2.loc['Stat'].values**2 + df2.loc['Sys down'].values**2)
 print df2
 
-df.to_csv('DF_sys.csv')
+#df.to_csv('DF_sys.csv')
 df2.to_csv('DF_res.csv')

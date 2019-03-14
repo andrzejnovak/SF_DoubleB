@@ -3,9 +3,12 @@ from cfit import *
 import numpy as np
 
 def runSF_x(file, bins, pt_bin, wp, 
-			merge=False, glue=True, #merge to use combined templates as inputs #glue to add separate templates and combine in script
+			merge=False, #merge to use combined templates as inputs 
+			glue=True, #glue to bind separate templates and vary them together
 			addSYS=False, calcSYS=True, SF_dict={},
-			SV=True, # Use SV mass method instead of JP only
+			ccSignal = False,
+			LTSV=True, # Use SV mass method instead of JP only
+
 			systname=None): #Add only one template (for debugging)
 
 	stat_n = 100 #100 #Set how many time to run statistical variation
@@ -55,16 +58,16 @@ def runSF_x(file, bins, pt_bin, wp,
 	if merge == 1: tempNs = ["g #rightarrow b#bar{b}", "b + g #rightarrow c#bar{c}", "c + dusg"]
 	elif merge == 2: tempNs = ["g #rightarrow b#bar{b}", "b + g #rightarrow c#bar{c} + c + dusg"]
 	else: 	tempNs = ["g #rightarrow b#bar{b}", "b", "g #rightarrow c#bar{c}", "c", "dusg"]
-	def add_templates(cf, glue, merge, var = "JP", SV=SV, tag=False):
+	def add_templates(cf, glue, merge, var = "JP", LTSV=LTSV, tag=False):
 		# Set DATA names
 		hname_data = "UNWEIGHTED__DATA__FatJet_"+var+"_all_"+pt+"_data_opt"
 		hname_data_tag = "UNWEIGHTED__DATA__FatJet_"+var+"_"+wp+"pass_"+pt+"_data_opt"
 		hname_data_untag = "UNWEIGHTED__DATA__FatJet_"+var+"_"+wp+"fail_"+pt+"_data_opt"
-		if SV and not tag:
+		if LTSV and not tag:
 			hname_data = "UNWEIGHTED__DATA__FatJet_"+var+"_all_"+pt+"_data_opt"
 			hname_data_tag = "UNWEIGHTED__DATA__FatJet_"+var+"hasSV"+"_all_"+pt+"_data_opt"
 			hname_data_untag = "UNWEIGHTED__DATA__FatJet_"+var+"noSV"+"_all_"+pt+"_data_opt"
-		elif SV and tag:
+		elif LTSV and tag:
 			hname_data = "UNWEIGHTED__DATA__FatJet_"+var+"_"+wp+"pass_"+pt+"_data_opt"
 			hname_data_tag = "UNWEIGHTED__DATA__FatJet_"+var+"hasSV_"+wp+"pass_"+pt+"_data_opt"
 			hname_data_untag = "UNWEIGHTED__DATA__FatJet_"+var+"noSV_"+wp+"pass_"+pt+"_data_opt"
@@ -75,7 +78,7 @@ def runSF_x(file, bins, pt_bin, wp,
 
 		# Hist name setup	
 		## Nominal names	
-		def_name_qcd = "UNWEIGHTED__QCDMuEnr__FatJet_"
+		def_name_qcd = "UNWEIGHTED__QCDMu+__FatJet_"
 		hname_bfromg = 	def_name_qcd+	var+"_all_"+	pt+"_bfromg_opt"
 		hname_b = 		def_name_qcd+	var+"_all_"+	pt+"_b_opt"
 		hname_cfromg = 	def_name_qcd+	var+"_all_"+	pt+"_cfromg_opt"
@@ -93,15 +96,15 @@ def runSF_x(file, bins, pt_bin, wp,
 		hists_nom_temp = []
 		## Tag and untag
 		### Regular mode
-		if not SV : 
+		if not LTSV : 
 			for i, hist_nom in enumerate(hists_nom):
 				hist = hist_nom.replace("_all_", "_"+wp+"pass_")
 				hists_tag.append(hist)
 			for i, hist_nom in enumerate(hists_nom):
 				hist = hist_nom.replace("_all_", "_"+wp+"fail_")
 				hists_untag.append(hist)
-		### SV mode all			
-		elif SV and not tag:
+		### LTSV mode all			
+		elif LTSV and not tag:
 			for i, hist_nom in enumerate(hists_nom):
 				hist = hist_nom.replace(var, var+"hasSV")
 				hists_tag.append(hist)
@@ -109,8 +112,8 @@ def runSF_x(file, bins, pt_bin, wp,
 				hist = hist_nom.replace(var, var+"noSV")
 				hists_untag.append(hist)
 
-		### SV mode tagged		
-		elif SV and tag:
+		### LTSV mode tagged		
+		elif LTSV and tag:
 			for i, hist_nom in enumerate(hists_nom):
 				hist = hist_nom.replace(var, var+"hasSV").replace("_all_", "_"+wp+"pass_")
 				hists_tag.append(hist)
@@ -128,11 +131,11 @@ def runSF_x(file, bins, pt_bin, wp,
 		# AddTemplate(label, name in input file, color)
 		## Nominal
 		if merge==1:	
-			cf.AddTemplate(tempNs[0], hists_nom[0]	,65)
-			cf.AddTemplate(tempNs[1], hists_nom[5],628)
+			cf.AddTemplate(tempNs[0], hists_nom[0], 65)
+			cf.AddTemplate(tempNs[1], hists_nom[5], 628)
 			cf.AddTemplate(tempNs[2], hists_nom[6],	597)
 			if glue:
-				if not SV:
+				if not LTSV:
 					pass 
 				else:
 					cf.GlueTemplates(tempNs[1:],"other flavours",28);
@@ -146,8 +149,9 @@ def runSF_x(file, bins, pt_bin, wp,
 			cf.AddTemplate(tempNs[3], hists_nom[3], 206)
 			cf.AddTemplate(tempNs[4], hists_nom[4], 212)
 			if glue:
-				if not SV:
-					cf.GlueTemplates([tempNs[1], tempNs[2]],"b + g #rightarrow c#bar{c}",628);
+				if not LTSV:
+					if not ccSignal: cf.GlueTemplates([tempNs[1], tempNs[2]],"b + g #rightarrow c#bar{c}",628);
+					else: cf.GlueTemplates([tempNs[0], tempNs[1]],"b + g #rightarrow b#bar{b}",628);
 					cf.GlueTemplates([tempNs[3], tempNs[4]],"c + dusg",597)
 				else:
 					cf.GlueTemplates(tempNs[1:],"other flavours",28);
@@ -157,7 +161,7 @@ def runSF_x(file, bins, pt_bin, wp,
 			cf.AddTemplateTag(tempNs[1], hists_tag[5], 		628)
 			cf.AddTemplateTag(tempNs[2], hists_tag[6], 		597)
 			if glue:
-				if not SV:
+				if not LTSV:
 					pass
 				else:
 					cf.GlueTemplatesTag(tempNs[1:],"other flavours",28);
@@ -171,8 +175,9 @@ def runSF_x(file, bins, pt_bin, wp,
 			cf.AddTemplateTag(tempNs[3], hists_tag[3],		206)
 			cf.AddTemplateTag(tempNs[4], hists_tag[4],		212)
 			if glue:
-				if not SV:
-					cf.GlueTemplatesTag([tempNs[1], tempNs[2]],"b + g #rightarrow c#bar{c}",628);
+				if not LTSV:
+					if not ccSignal: cf.GlueTemplates([tempNs[1], tempNs[2]],"b + g #rightarrow c#bar{c}",628);
+					else: cf.GlueTemplates([tempNs[0], tempNs[1]],"b + g #rightarrow b#bar{b}",628);
 					cf.GlueTemplatesTag([tempNs[3], tempNs[4]],"c + dusg",597)
 				else:
 					cf.GlueTemplatesTag(tempNs[1:],"other flavours",28);
@@ -191,14 +196,14 @@ def runSF_x(file, bins, pt_bin, wp,
 			cf.AddTemplateUntag(tempNs[3], hists_untag[3],	8)
 			cf.AddTemplateUntag(tempNs[4], hists_untag[4],	4)
 	
-	if not SV:
+	if not LTSV:
 		add_templates(cfJP, glue, merge, var="JP")
 	else:
-		add_templates(cfSV, glue, merge, SV=False, var="tau1VertexMassCorr")
-		add_templates(cfJP, glue, merge, var="JP", SV=True, tag=False)
-		add_templates(cfJPtag, glue, merge, var="JP", SV=True, tag=True)
+		add_templates(cfSV, glue, merge, LTSV=False, var="tau1VertexMassCorr")
+		add_templates(cfJP, glue, merge, var="JP", LTSV=True, tag=False)
+		add_templates(cfJPtag, glue, merge, var="JP", LTSV=True, tag=True)
 		
-	def getpars(cf, tempNs, sysVar, statVar): 
+	def getpars(cf, tempNs, sysVar, statVar, ccSignal=False): 
 		# Like CFIT example
 		par, err = [], []
 		par_tag, err_tag = [], []
@@ -236,16 +241,19 @@ def runSF_x(file, bins, pt_bin, wp,
 		effDATA = effMC*par_tag[0]/par[0]
 		sf = effDATA/effMC
 
-		return nmc1, nmc, nmc1_tag, nmc_tag, par[0], par_tag[0], chi2, chi2_tag
+		if not ccSignal:
+			return nmc1, nmc, nmc1_tag, nmc_tag, par[0], par_tag[0], chi2, chi2_tag
+		else: 
+			return nmc1, nmc, nmc1_tag, nmc_tag, par[2], par_tag[2], chi2, chi2_tag
 
-	def getSF(cfmain, tempNs, cfJPall=None, cfJPtag=None, sysVar="", statVar=-1, SV=SV):
+	def getSF(cfmain, tempNs, cfJPall=None, cfJPtag=None, sysVar="", statVar=-1, LTSV=LTSV):
 
-		if not SV :
+		if not LTSV :
 			nmc1, nmc, nmc1_tag, nmc_tag, par, par_tag, chi2, chi2_tag = getpars(cfmain, tempNs, sysVar=sysVar, statVar=statVar)
 			fr = nmc1/nmc;
 			fr_tag = nmc1_tag/nmc_tag;	   
 			effMC = nmc1_tag/nmc1
-			effDATA = nmc_tag/nmc*par_tag[0]/par[0]*fr_tag/fr		
+			effDATA = nmc_tag/nmc*par_tag/par*fr_tag/fr		
 			
 			sf = effDATA/effMC
 			#SF = sf
@@ -268,10 +276,10 @@ def runSF_x(file, bins, pt_bin, wp,
 
 		return SF, pars, chi2s
 
-	if not SV:
-		SF, nom_pars, chi2s = getSF(cfJP, tempNs, sysVar="", SV=False)
+	if not LTSV:
+		SF, nom_pars, chi2s = getSF(cfJP, tempNs, sysVar="", LTSV=False)
 	else:
-		SF, nom_pars, chi2s = getSF(cfSV, tempNs, cfJPall=cfJP, cfJPtag=cfJPtag, sysVar="", SV=SV)
+		SF, nom_pars, chi2s = getSF(cfSV, tempNs, cfJPall=cfJP, cfJPtag=cfJPtag, sysVar="", LTSV=LTSV)
 	print "SF =", SF
 
 	if calcSYS:
@@ -292,10 +300,10 @@ def runSF_x(file, bins, pt_bin, wp,
 			print "Incorrect number of systs considered"
 		
 		for i, sysVar in enumerate(systVarlist):
-			if not SV:
+			if not LTSV:
 				SF_sys_i, pars,ch = getSF(cfJP, tempNs, sysVar=sysVar)
 			else:
-				SF_sys_i, pars, ch = getSF(cfSV, tempNs, cfJPall=cfJP, cfJPtag=cfJPtag, sysVar=sysVar, SV=SV)
+				SF_sys_i, pars, ch = getSF(cfSV, tempNs, cfJPall=cfJP, cfJPtag=cfJPtag, sysVar=sysVar, LTSV=LTSV)
 			print "SF", sysVar, SF, SF_sys_i, (SF - SF_sys_i)**2
 			delta = SF - SF_sys_i
 			sigma2 = delta**2
@@ -309,10 +317,10 @@ def runSF_x(file, bins, pt_bin, wp,
 		# Calculate statistical errs
 		stat_SFs = []
 		for i in range(stat_n):
-			if not SV:
+			if not LTSV:
 				SF_stat_i, pars, ch = getSF(cf, tempNs, sysVar="", statVar=667+i)
 			else:
-				SF_stat_i, pars, ch = getSF(cfSV, tempNs, cfJPall=cfJP, cfJPtag=cfJPtag, sysVar="", statVar=667+i, SV=SV)
+				SF_stat_i, pars, ch = getSF(cfSV, tempNs, cfJPall=cfJP, cfJPtag=cfJPtag, sysVar="", statVar=667+i, LTSV=LTSV)
 			stat_SFs.append(SF_stat_i)
 
 		sf_stat_mean = sum(stat_SFs)/float(stat_n)
@@ -351,10 +359,10 @@ def runSF_x(file, bins, pt_bin, wp,
 
 					#add_templates(cf, glue, merge)
 
-			if not SV:
+			if not LTSV:
 				SF_sys2_i, par, ch = getSF(cfJP, tempNs, sysVar="", statVar=-1)
 			else:
-				SF_sys2_i, par, ch = getSF(cfSV, tempNs, cfJPall=cfJP, cfJPtag=cfJPtag, sysVar="", statVar=-1, SV=SV)
+				SF_sys2_i, par, ch = getSF(cfSV, tempNs, cfJPall=cfJP, cfJPtag=cfJPtag, sysVar="", statVar=-1, LTSV=LTSV)
 			cf.SetOptimization(OPT_MORPH_SGN_SIGMA)
 			cf.SetMorphing(OPTMORPH_CUTOFF,0.5)
 
@@ -420,5 +428,5 @@ if __name__ == "__main__":
 	r = 'May17single/'
 	file_name = r+'Run2017BCDEF_ReReco_QCDMuonEnriched_AK4DiJet170_Pt250_Final_DoubleMuonTaggedFatJets_histograms_btagval_allVars_ptReweighted_SysMerged_SFtemplates_DoubleBH.root'
 	glue=True; addSYS=False; merge=2; calcSYS=False
-	SF, pars, chi2s = runSF_x(file_name, pt_bins, m, WP, merge=merge, glue=glue, addSYS=addSYS, calcSYS=calcSYS, systname=None, SV=True)
+	SF, pars, chi2s = runSF_x(file_name, pt_bins, m, WP, merge=merge, glue=glue, addSYS=addSYS, calcSYS=calcSYS, systname=None, LTSV=True)
 	
