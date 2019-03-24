@@ -1,9 +1,9 @@
 #from __future__ import unicode_literals
 from cfit import *
+import ROOT as r
 import numpy as np
 
 def runSF_x(file, bins, pt_bin, wp, 
-			merge=False, #merge to use combined templates as inputs 
 			glue=True, #glue to bind separate templates and vary them together
 			addSYS=False, calcSYS=True, SF_dict={},
 			ccSignal = False,
@@ -13,11 +13,6 @@ def runSF_x(file, bins, pt_bin, wp,
 
 	stat_n = 100 #100 #Set how many time to run statistical variation
 	pt = bins[pt_bin] # Pick a pt bin
-
-	# Merged templates
-	if merge==False: merge=0 # No merging
-	if merge==True: merge=1  # Merge cfrag + b and c + light
-	if merge==2: merge=2     # Merge all bkgs
 
 	cfJP = cfit("JP discriminator")
 	cfSV = cfit("SV discriminator")
@@ -34,6 +29,7 @@ def runSF_x(file, bins, pt_bin, wp,
 	for cf in [cfJP, cfSV, cfJPtag]:
 		cf.SetVerbose(0)
 		cf.ProducePlots(True)
+		cf.SetBatch(True)
 		cf.SetLegendHeader(pt+" "+wp)
 		cf.SetOptimization(OPT_MORPH_SGN_SIGMA)
 		cf.SetCovarianceMode(COV_MAX)
@@ -47,7 +43,10 @@ def runSF_x(file, bins, pt_bin, wp,
 			systlist = [systname]
 		else:
 			#systlist = ["JES", "NTRACKS", "BFRAG", "CFRAG", "CD", "K0L", "PU"]
-			systlist = ["JES", "BFRAG", "CD", "K0L", "PU"]
+			#systlist = ["JES", "BFRAG", "CD", "K0L", "PU"]
+			#systlist = ["JES", "BFRAG", "CD", "K0L", "PU"]
+			#systlist = ["BFRAG"]
+			systlist = ["BFRAG", "K0L"]
 		print "Added systs", systlist
 		for sysName in systlist:
 			for cf in [cfJP, cfSV, cfJPtag]:
@@ -55,10 +54,10 @@ def runSF_x(file, bins, pt_bin, wp,
 			
 
 	# Mergning for low count templates:
-	if merge == 1: tempNs = ["g #rightarrow b#bar{b}", "b + g #rightarrow c#bar{c}", "c + dusg"]
-	elif merge == 2: tempNs = ["g #rightarrow b#bar{b}", "b + g #rightarrow c#bar{c} + c + dusg"]
-	else: 	tempNs = ["g #rightarrow b#bar{b}", "b", "g #rightarrow c#bar{c}", "c", "dusg"]
-	def add_templates(cf, glue, merge, var = "JP", LTSV=LTSV, tag=False):
+	# if merge == 1: tempNs = ["g #rightarrow b#bar{b}", "b + g #rightarrow c#bar{c}", "c + dusg"]
+	# elif merge == 2: tempNs = ["g #rightarrow b#bar{b}", "b + g #rightarrow c#bar{c} + c + dusg"]
+	# else: 	tempNs = ["g #rightarrow b#bar{b}", "b", "g #rightarrow c#bar{c}", "c", "dusg"]
+	def add_templates(cf, glue, var = "JP", LTSV=LTSV, tag=False):
 		# Set DATA names
 		hname_data = "UNWEIGHTED__DATA__FatJet_"+var+"_all_"+pt+"_data_opt"
 		hname_data_tag = "UNWEIGHTED__DATA__FatJet_"+var+"_"+wp+"pass_"+pt+"_data_opt"
@@ -127,7 +126,27 @@ def runSF_x(file, bins, pt_bin, wp,
 		else: 
 			print "Really should not happen"
 
+		# Check if histograms are non-empty
+		empty_hist_ix = []
+		f = r.TFile(file)
+		for i, (_nom, _tag, _untag) in enumerate(zip(hists_nom, hists_tag, hists_untag)):
+			#print i, _nom, f.Get(_nom).Integral(), f.Get(_tag).Integral(), f.Get(_untag).Integral()	
+			empty_hist_ix.append(any(_int == 0 for _int in [f.Get(_nom).Integral(), f.Get(_tag).Integral(), f.Get(_untag).Integral()]))
+
+	
+		if any(empty_hist_ix[5:7]) : 
+			print "Dynamic merge 2", var, tag
+			merge = 2
+		elif any(empty_hist_ix[0:5]): 
+			print "Dynamic merge 1", var, tag
+			merge = 1
+		else:
+			merge=0
 		
+		if merge == 1: tempNs = ["g #rightarrow b#bar{b}", "b + g #rightarrow c#bar{c}", "c + dusg"]
+		elif merge == 2: tempNs = ["g #rightarrow b#bar{b}", "b + g #rightarrow c#bar{c} + c + dusg"]
+		else: 	tempNs = ["g #rightarrow b#bar{b}", "b", "g #rightarrow c#bar{c}", "c", "dusg"]
+
 		# AddTemplate(label, name in input file, color)
 		## Nominal
 		if merge==1:	
@@ -195,13 +214,15 @@ def runSF_x(file, bins, pt_bin, wp,
 			cf.AddTemplateUntag(tempNs[2], hists_untag[2],	42)
 			cf.AddTemplateUntag(tempNs[3], hists_untag[3],	8)
 			cf.AddTemplateUntag(tempNs[4], hists_untag[4],	4)
+
+		return tempNs
 	
 	if not LTSV:
-		add_templates(cfJP, glue, merge, var="JP")
+		tempNs = add_templates(cfJP, glue, var="JP")
 	else:
-		add_templates(cfSV, glue, merge, LTSV=False, var="tau1VertexMassCorr")
-		add_templates(cfJP, glue, merge, var="JP", LTSV=True, tag=False)
-		add_templates(cfJPtag, glue, merge, var="JP", LTSV=True, tag=True)
+		tempNs = add_templates(cfSV, glue, LTSV=False, var="tau1VertexMassCorr")
+		tempNsJPnotag = add_templates(cfJP, glue, var="JP", LTSV=True, tag=False)
+		tempNsJPtag = add_templates(cfJPtag, glue, var="JP", LTSV=True, tag=True)
 		
 	def getpars(cf, tempNs, sysVar, statVar, ccSignal=False): 
 		# Like CFIT example
@@ -263,9 +284,9 @@ def runSF_x(file, bins, pt_bin, wp,
 
 		else:	
 			#print "Fitting JPall"
-			nmc1, nmc, nmc1_tag, nmc_tag, par, par_tag, chi2, chi2_tag = getpars(cfJPall, tempNs, sysVar, statVar)
+			nmc1, nmc, nmc1_tag, nmc_tag, par, par_tag, chi2, chi2_tag = getpars(cfJPall[0], cfJPall[1], sysVar, statVar)
 			#print "Fitting JPtagged" 
-			nmc1_tagged, nmc, nmc1_tagged_SV, nmc_tag, parJPtagged, par_tagJPtagged, chi2tag, chi2_tagtag = getpars(cfJPtag, tempNs, sysVar, statVar)			  
+			nmc1_tagged, nmc, nmc1_tagged_SV, nmc_tag, parJPtagged, par_tagJPtagged, chi2tag, chi2_tagtag = getpars(cfJPtag[0], cfJPtag[1], sysVar, statVar)			  
 			#print "Fitting SVmass"
 			nmc1_SV_SVfit, nmc, nmc1_tagged_SV_SVfit, nmc_tag, parSV, par_tagSV, chi2SV, chi2_tagSV = getpars(cfmain, tempNs, sysVar, statVar)
 		
@@ -279,7 +300,7 @@ def runSF_x(file, bins, pt_bin, wp,
 	if not LTSV:
 		SF, nom_pars, chi2s = getSF(cfJP, tempNs, sysVar="", LTSV=False)
 	else:
-		SF, nom_pars, chi2s = getSF(cfSV, tempNs, cfJPall=cfJP, cfJPtag=cfJPtag, sysVar="", LTSV=LTSV)
+		SF, nom_pars, chi2s = getSF(cfSV, tempNs, cfJPall=[cfJP,tempNsJPnotag], cfJPtag=[cfJPtag,tempNsJPtag], sysVar="", LTSV=LTSV)
 	print "SF =", SF
 
 	if calcSYS:
@@ -303,7 +324,7 @@ def runSF_x(file, bins, pt_bin, wp,
 			if not LTSV:
 				SF_sys_i, pars,ch = getSF(cfJP, tempNs, sysVar=sysVar)
 			else:
-				SF_sys_i, pars, ch = getSF(cfSV, tempNs, cfJPall=cfJP, cfJPtag=cfJPtag, sysVar=sysVar, LTSV=LTSV)
+				SF_sys_i, pars, ch = getSF(cfSV, tempNs, cfJPall=[cfJP,tempNsJPnotag], cfJPtag=[cfJPtag, tempNsJPtag], sysVar=sysVar, LTSV=LTSV)
 			print "SF", sysVar, SF, SF_sys_i, (SF - SF_sys_i)**2
 			delta = SF - SF_sys_i
 			sigma2 = delta**2
@@ -314,13 +335,14 @@ def runSF_x(file, bins, pt_bin, wp,
 			else:
 				sigma_syst_down += sigma2
 
+
 		# Calculate statistical errs
 		stat_SFs = []
 		for i in range(stat_n):
 			if not LTSV:
-				SF_stat_i, pars, ch = getSF(cf, tempNs, sysVar="", statVar=667+i)
+				SF_stat_i, pars, ch = getSF(cfJP, tempNs, sysVar="", statVar=667+i)
 			else:
-				SF_stat_i, pars, ch = getSF(cfSV, tempNs, cfJPall=cfJP, cfJPtag=cfJPtag, sysVar="", statVar=667+i, LTSV=LTSV)
+				SF_stat_i, pars, ch = getSF(cfSV, tempNs, cfJPall=[cfJP,tempNsJPnotag], cfJPtag=[cfJPtag, tempNsJPtag], sysVar="", statVar=667+i, LTSV=LTSV)
 			stat_SFs.append(SF_stat_i)
 
 		sf_stat_mean = sum(stat_SFs)/float(stat_n)
@@ -362,7 +384,7 @@ def runSF_x(file, bins, pt_bin, wp,
 			if not LTSV:
 				SF_sys2_i, par, ch = getSF(cfJP, tempNs, sysVar="", statVar=-1)
 			else:
-				SF_sys2_i, par, ch = getSF(cfSV, tempNs, cfJPall=cfJP, cfJPtag=cfJPtag, sysVar="", statVar=-1, LTSV=LTSV)
+				SF_sys2_i, par, ch = getSF(cfSV, tempNs, cfJPall=[cfJP,tempNsJPnotag], cfJPtag=[cfJPtag, tempNsJPtag], sysVar="", statVar=-1, LTSV=LTSV)
 			cf.SetOptimization(OPT_MORPH_SGN_SIGMA)
 			cf.SetMorphing(OPTMORPH_CUTOFF,0.5)
 
@@ -421,12 +443,23 @@ if __name__ == "__main__":
 	'SF_JP' : []
 	}
 
-	WP = "DoubleBH"
-	pt_bins = ['pt250to300', 'pt300to350',  'pt350to450', 'pt450to2000']
-	m = 1
+	WP = "DoubleBM2"
+	pt_bins = ['pt350to430', 'pt450to2000']
+	m = 0
 
-	r = 'May17single/'
-	file_name = r+'Run2017BCDEF_ReReco_QCDMuonEnriched_AK4DiJet170_Pt250_Final_DoubleMuonTaggedFatJets_histograms_btagval_allVars_ptReweighted_SysMerged_SFtemplates_DoubleBH.root'
-	glue=True; addSYS=False; merge=2; calcSYS=False
-	SF, pars, chi2s = runSF_x(file_name, pt_bins, m, WP, merge=merge, glue=glue, addSYS=addSYS, calcSYS=calcSYS, systname=None, LTSV=True)
+	file_name = 'col3/collated_normRun2016_DoubleB.root'
+	file_name = 'col3/collatedRun2016_DoubleB.root'
+	glue=True; addSYS=True; calcSYS=True
+	#glue=False; addSYS=False; merge=False; calcSYS=False
+	#SF, pars, chi2s = runSF_x(file_name, pt_bins, m, WP, glue=glue, addSYS=addSYS, calcSYS=calcSYS, systname=None, LTSV=True)
+	SF, sigma_stat, syst_up, syst_down, variances_names, errors, variances, nom_pars, chi2 = runSF_x(file_name, 
+		pt_bins, m, WP, glue=glue, addSYS=addSYS, calcSYS=calcSYS, systname=None, LTSV=True)
+	print SF
+
+	# Threading example ( Doesn't run faster though, likely due to the wrapped cfit class)
+	# import threading
+	# threading.Thread( target=runSF_x, 
+	# 	args=(file_name, pt_bins, m, WP,), 
+	# 	kwargs={'glue':glue, 'addSYS':addSYS, 'calcSYS':calcSYS, 'systname':None, 'LTSV':True},
+	# 	name='thread_function').start()	
 	
