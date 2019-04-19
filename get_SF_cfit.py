@@ -2,13 +2,15 @@
 from cfit import *
 import ROOT as r
 import numpy as np
+import os
 
 def runSF_x(file, bins, pt_bin, wp, 
 			glue=True, #glue to bind separate templates and vary them together
 			addSYS=False, calcSYS=True, SF_dict={},
 			ccSignal = False,
 			LTSV=True, # Use SV mass method instead of JP only
-
+			systlist = ["BFRAG", "CFRAG","K0L", "PU"],
+			debug=False,
 			systname=None): #Add only one template (for debugging)
 
 	stat_n = 100 #100 #Set how many time to run statistical variation
@@ -18,17 +20,19 @@ def runSF_x(file, bins, pt_bin, wp,
 	cfSV = cfit("SV discriminator")
 	cfJPtag = cfit("JPtagged discriminator")
 
-	cfJP.SetMatrixName("matrix_"+pt)
+	cfJP.SetMatrixName("matrices/matrix_"+pt+'_'+wp)
 	cfJP.SetMatrixOption("WRITE")
-	cfSV.SetMatrixName("SVmatrix_"+pt)
+	cfSV.SetMatrixName("matrices/SVmatrix_"+pt+'_'+wp)
 	cfSV.SetMatrixOption("WRITE")
-	cfJPtag.SetMatrixName("JPtagmatrix_"+pt)
+	cfJPtag.SetMatrixName("matrices/JPtagmatrix_"+pt+'_'+wp)
 	cfJPtag.SetMatrixOption("WRITE")
 
 	# Settings
 	for cf in [cfJP, cfSV, cfJPtag]:
 		cf.SetVerbose(0)
 		cf.ProducePlots(True)
+		make_dirs('pics/'+wp+'/'+cf.GetRun().split(" ")[0])
+		cf.SetPicsDir('pics/'+wp+'/'+cf.GetRun().split(" ")[0])
 		cf.SetBatch(True)
 		cf.SetLegendHeader(pt+" "+wp)
 		cf.SetOptimization(OPT_MORPH_SGN_SIGMA)
@@ -43,10 +47,7 @@ def runSF_x(file, bins, pt_bin, wp,
 			systlist = [systname]
 		else:
 			#systlist = ["JES", "NTRACKS", "BFRAG", "CFRAG", "CD", "K0L", "PU"]
-			#systlist = ["JES", "BFRAG", "CD", "K0L", "PU"]
-			#systlist = ["JES", "BFRAG", "CD", "K0L", "PU"]
-			#systlist = ["BFRAG"]
-			systlist = ["BFRAG", "K0L"]
+			systlist = systlist
 		print "Added systs", systlist
 		for sysName in systlist:
 			for cf in [cfJP, cfSV, cfJPtag]:
@@ -57,7 +58,7 @@ def runSF_x(file, bins, pt_bin, wp,
 	# if merge == 1: tempNs = ["g #rightarrow b#bar{b}", "b + g #rightarrow c#bar{c}", "c + dusg"]
 	# elif merge == 2: tempNs = ["g #rightarrow b#bar{b}", "b + g #rightarrow c#bar{c} + c + dusg"]
 	# else: 	tempNs = ["g #rightarrow b#bar{b}", "b", "g #rightarrow c#bar{c}", "c", "dusg"]
-	def add_templates(cf, glue, var = "JP", LTSV=LTSV, tag=False):
+	def add_templates(cf, glue, var = "JP", LTSV=LTSV, tag=False, ccSignal=False):
 		# Set DATA names
 		hname_data = "UNWEIGHTED__DATA__FatJet_"+var+"_all_"+pt+"_data_opt"
 		hname_data_tag = "UNWEIGHTED__DATA__FatJet_"+var+"_"+wp+"pass_"+pt+"_data_opt"
@@ -127,22 +128,38 @@ def runSF_x(file, bins, pt_bin, wp,
 			print "Really should not happen"
 
 		# Check if histograms are non-empty
-		empty_hist_ix = []
 		f = r.TFile(file)
-		for i, (_nom, _tag, _untag) in enumerate(zip(hists_nom, hists_tag, hists_untag)):
-			#print i, _nom, f.Get(_nom).Integral(), f.Get(_tag).Integral(), f.Get(_untag).Integral()	
-			empty_hist_ix.append(any(_int == 0 for _int in [f.Get(_nom).Integral(), f.Get(_tag).Integral(), f.Get(_untag).Integral()]))
 
+		if addSYS:
+			_ups, _downs = ["_"+_f+"up" for _f in systlist], ["_"+_f+"down" for _f in systlist]
+			_systVarlist = [""] + list(sum(zip(_ups, _downs+[0]), ()))
+		else: _systVarlist = [""]
+		
+		empty_hist_id_tot = np.array([False] * len(hists_nom))
+		for _syst in _systVarlist:
+			empty_hist_ix = []			
+			for i, (_nom, _tag, _untag) in enumerate(zip(hists_nom, hists_tag, hists_untag)):
+				#print f.Get(_nom), f.Get(_tag), f.Get(_untag)
+				#print i, _nom, f.Get(_nom).Integral(), f.Get(_tag).Integral(), f.Get(_untag).Integral()	
+				try:
+					empty_hist_ix.append(any(_int == 0. for _int in [f.Get(_nom+_syst).Integral(), f.Get(_tag+_syst).Integral(), f.Get(_untag+_syst).Integral()]))
+				except:
+					print [f.Get(_nom+_syst), f.Get(_tag+_syst), f.Get(_untag+_syst)]
+					import sys
+					sys.exit()
+			empty_hist_id_tot = (empty_hist_id_tot ^ empty_hist_ix)
 	
-		if any(empty_hist_ix[5:7]) : 
-			print "Dynamic merge 2", var, tag
+		if debug: print "Empty templates :", empty_hist_id_tot
+		if any(empty_hist_id_tot[5:7]) : 
+			if debug: print "Dynamic merge 2", var, tag
 			merge = 2
-		elif any(empty_hist_ix[0:5]): 
-			print "Dynamic merge 1", var, tag
+		elif any(empty_hist_id_tot[0:5]): 
+			if debug: print "Dynamic merge 1", var, tag
 			merge = 1
 		else:
+			if debug: print "No merging required"
 			merge=0
-		
+
 		if merge == 1: tempNs = ["g #rightarrow b#bar{b}", "b + g #rightarrow c#bar{c}", "c + dusg"]
 		elif merge == 2: tempNs = ["g #rightarrow b#bar{b}", "b + g #rightarrow c#bar{c} + c + dusg"]
 		else: 	tempNs = ["g #rightarrow b#bar{b}", "b", "g #rightarrow c#bar{c}", "c", "dusg"]
@@ -185,8 +202,8 @@ def runSF_x(file, bins, pt_bin, wp,
 				else:
 					cf.GlueTemplatesTag(tempNs[1:],"other flavours",28);
 		elif merge==2:	
-			cf.AddTemplateTag(tempNs[0], hists_nom[0], 65)
-			cf.AddTemplateTag(tempNs[1], hists_nom[7], 28)
+			cf.AddTemplateTag(tempNs[0], hists_tag[0], 65)
+			cf.AddTemplateTag(tempNs[1], hists_tag[7], 28)
 		else:
 			cf.AddTemplateTag(tempNs[0], hists_tag[0],		65)
 			cf.AddTemplateTag(tempNs[1], hists_tag[1],		213)
@@ -206,8 +223,8 @@ def runSF_x(file, bins, pt_bin, wp,
 			cf.AddTemplateUntag(tempNs[1], hists_untag[5],	628)
 			cf.AddTemplateUntag(tempNs[2], hists_untag[6],	597)
 		elif merge==2:	
-			cf.AddTemplateUntag(tempNs[0], hists_nom[0], 65)
-			cf.AddTemplateUntag(tempNs[1], hists_nom[7], 28)
+			cf.AddTemplateUntag(tempNs[0], hists_untag[0], 65)
+			cf.AddTemplateUntag(tempNs[1], hists_untag[7], 28)
 		else:			
 			cf.AddTemplateUntag(tempNs[0], hists_untag[0],	7)
 			cf.AddTemplateUntag(tempNs[1], hists_untag[1],	213)
@@ -218,11 +235,11 @@ def runSF_x(file, bins, pt_bin, wp,
 		return tempNs
 	
 	if not LTSV:
-		tempNs = add_templates(cfJP, glue, var="JP")
+		tempNs = add_templates(cfJP, glue, var="JP", ccSignal=ccSignal)
 	else:
-		tempNs = add_templates(cfSV, glue, LTSV=False, var="tau1VertexMassCorr")
-		tempNsJPnotag = add_templates(cfJP, glue, var="JP", LTSV=True, tag=False)
-		tempNsJPtag = add_templates(cfJPtag, glue, var="JP", LTSV=True, tag=True)
+		tempNs = add_templates(cfSV, glue, LTSV=False, var="tau1VertexMassCorr", ccSignal=ccSignal)
+		tempNsJPnotag = add_templates(cfJP, glue, var="JP", LTSV=True, tag=False, ccSignal=ccSignal)
+		tempNsJPtag = add_templates(cfJPtag, glue, var="JP", LTSV=True, tag=True, ccSignal=ccSignal)
 		
 	def getpars(cf, tempNs, sysVar, statVar, ccSignal=False): 
 		# Like CFIT example
@@ -235,7 +252,7 @@ def runSF_x(file, bins, pt_bin, wp,
 		for i in range(cf.GetNPar()):
 			par.append(cf.GetPar(i))
 			err.append(cf.GetParErr(i))
-
+		
 		chi2 = cf.GetChisq()
 		ndata = cf.GetNData()
 		nmc1 = cf.GetNTemplate(tempNs[0]) #Signal
@@ -261,6 +278,17 @@ def runSF_x(file, bins, pt_bin, wp,
 		#effDATA = nmc_tag/nmc*par_tag[0]/par[0]*fr_tag/fr		
 		effDATA = effMC*par_tag[0]/par[0]
 		sf = effDATA/effMC
+		if debug: print "{: <24} : EffMC = {} , EffData = {} ".format(cf.GetRun().split("_")[0] ,  effMC, effDATA)
+		if debug: print "          Total MC pre-tag / post-tag = {}, signal only = {}".format(nmc, nmc_tag)
+		if debug: print "         Signal MC pre-tag / post-tag = {}, signal only = {}".format(nmc1_tag, nmc1_tag)
+ 
+		# r_name = cf.GetRun().split(" ")[0]
+		# print r_name
+		# try: os.mkdir('out_pics/')
+		# except: pass
+		# try: os.mkdir('out_pics/{}'.format(r_name))
+		# except: pass
+		# os.system('mv pics/*.eps out_pics/{}/'.format(r_name))
 
 		if not ccSignal:
 			return nmc1, nmc, nmc1_tag, nmc_tag, par[0], par_tag[0], chi2, chi2_tag
@@ -301,7 +329,7 @@ def runSF_x(file, bins, pt_bin, wp,
 		SF, nom_pars, chi2s = getSF(cfJP, tempNs, sysVar="", LTSV=False)
 	else:
 		SF, nom_pars, chi2s = getSF(cfSV, tempNs, cfJPall=[cfJP,tempNsJPnotag], cfJPtag=[cfJPtag,tempNsJPtag], sysVar="", LTSV=LTSV)
-	print "SF =", SF
+	if debug: print "SF =", SF
 
 	if calcSYS:
 		print "Calculating Errors"
@@ -372,7 +400,7 @@ def runSF_x(file, bins, pt_bin, wp,
 					cf.SetInputFile(file)
 			   
 					mname = "matrix_"+pt;
-					cf.SetMatrixName(mname)
+					cf.SetMatrixName(mname+'_'+wp)
 					cf.SetMatrixOption("WRITE")
 
 					#cf.SetData(hname_data)   
@@ -428,6 +456,14 @@ def runSF_x(file, bins, pt_bin, wp,
 	else:
 		return SF, nom_pars, chi2s
 
+def make_dirs(dirname):
+	import os, errno
+	try:
+		os.makedirs(dirname)
+	except OSError, e:
+		if e.errno != errno.EEXIST:
+			raise
+
 if __name__ == "__main__":
 	
 	SF_dict = {
@@ -443,18 +479,32 @@ if __name__ == "__main__":
 	'SF_JP' : []
 	}
 
-	WP = "DoubleBM2"
-	pt_bins = ['pt350to430', 'pt450to2000']
+	WP = "DDBvLM2"
+	pt_bins = ['pt350to2000', 'pt430to2000']
 	m = 0
 
 	file_name = 'col3/collated_normRun2016_DoubleB.root'
 	file_name = 'col3/collatedRun2016_DoubleB.root'
-	glue=True; addSYS=True; calcSYS=True
+	
+	glue=False; addSYS=True; calcSYS=True
 	#glue=False; addSYS=False; merge=False; calcSYS=False
 	#SF, pars, chi2s = runSF_x(file_name, pt_bins, m, WP, glue=glue, addSYS=addSYS, calcSYS=calcSYS, systname=None, LTSV=True)
-	SF, sigma_stat, syst_up, syst_down, variances_names, errors, variances, nom_pars, chi2 = runSF_x(file_name, 
-		pt_bins, m, WP, glue=glue, addSYS=addSYS, calcSYS=calcSYS, systname=None, LTSV=True)
-	print SF
+	
+	# SF, sigma_stat, syst_up, syst_down, variances_names, errors, variances, nom_pars, chi2 = runSF_x(file_name, 
+	# 	pt_bins, m, WP, glue=glue, addSYS=addSYS, calcSYS=calcSYS, systname=None, LTSV=True)
+	print "DoubleB 16"
+	file_name = 'col_fin450/collated_normRun2016_DoubleB.root'
+	SF, pars, chi2s = runSF_x(file_name, pt_bins, m, "DoubleBM1", glue=glue, addSYS=False, calcSYS=False, systname=None, LTSV=True, ccSignal=False, debug=True)
+	print "DoubleB 17"
+	file_name = 'col_fin450/collated_normRun2017_DoubleB.root'
+	SF, pars, chi2s = runSF_x(file_name, pt_bins, m, "DoubleBM1", glue=glue, addSYS=False, calcSYS=False, systname=None, LTSV=True, ccSignal=False, debug=True)
+	
+	# file_name = 'colnom/collated_normRun2016_DDBvL.root'
+	# print "DDBvL"
+	# SF, pars, chi2s = runSF_x(file_name, pt_bins, m, "DDBvLM2", glue=glue, addSYS=False, calcSYS=False, systname=None, LTSV=True, ccSignal=False, debug=True)
+	# print "DeepAK8"
+	# file_name = 'colnom/collated_normRun2016_DeepAK8ZHbb.root'
+	# SF, pars, chi2s = runSF_x(file_name, pt_bins, m, "DeepAK8ZHbbM2", glue=glue, addSYS=False, calcSYS=False, systname=None, LTSV=True	, ccSignal=False, debug=True)
 
 	# Threading example ( Doesn't run faster though, likely due to the wrapped cfit class)
 	# import threading
@@ -463,3 +513,4 @@ if __name__ == "__main__":
 	# 	kwargs={'glue':glue, 'addSYS':addSYS, 'calcSYS':calcSYS, 'systname':None, 'LTSV':True},
 	# 	name='thread_function').start()	
 	
+
