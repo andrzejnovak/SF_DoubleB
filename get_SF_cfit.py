@@ -12,7 +12,10 @@ def runSF_x(file, bins, pt_bin, wp,
 			systlist = ["BFRAG", "CFRAG","K0L", "PU"],
 			debug=False,
 			systname=None): #Add only one template (for debugging)
-
+	picdir = 'pics'
+	year=file.split("Run")[-1][:4]
+	if debug: picdir = 'testpics'
+		
 	stat_n = 100 #100 #Set how many time to run statistical variation
 	pt = bins[pt_bin] # Pick a pt bin
 
@@ -20,21 +23,30 @@ def runSF_x(file, bins, pt_bin, wp,
 	cfSV = cfit("SV discriminator")
 	cfJPtag = cfit("JPtagged discriminator")
 
-	cfJP.SetMatrixName("matrices/matrix_"+pt+'_'+wp)
+	make_dirs("matrices/"+year+wp+'/'+cfJP.GetRun().split(" ")[0]+"matrix_"+pt+'_'+wp)
+	cfJP.SetMatrixName("matrices/"+year+wp+'/'+cfJP.GetRun().split(" ")[0]+"matrix_"+pt+'_'+wp)
 	cfJP.SetMatrixOption("WRITE")
-	cfSV.SetMatrixName("matrices/SVmatrix_"+pt+'_'+wp)
+	make_dirs("matrices/"+year+wp+'/'+cfSV.GetRun().split(" ")[0]+"matrix_"+pt+'_'+wp)
+	cfSV.SetMatrixName("matrices/"+year+wp+'/'+cfSV.GetRun().split(" ")[0]+"matrix_"+pt+'_'+wp)
 	cfSV.SetMatrixOption("WRITE")
-	cfJPtag.SetMatrixName("matrices/JPtagmatrix_"+pt+'_'+wp)
+	make_dirs("matrices/"+year+wp+'/'+cfJPtag.GetRun().split(" ")[0]+"matrix_"+pt+'_'+wp)
+	cfJPtag.SetMatrixName("matrices/"+year+wp+'/'+cfJPtag.GetRun().split(" ")[0]+"matrix_"+pt+'_'+wp)
 	cfJPtag.SetMatrixOption("WRITE")
+	# cfJP.SetMatrixName("matrices/matrix_"+pt+'_'+wp)
+	# cfJP.SetMatrixOption("WRITE")
+	# cfSV.SetMatrixName("matrices/SVmatrix_"+pt+'_'+wp)
+	# cfSV.SetMatrixOption("WRITE")
+	# cfJPtag.SetMatrixName("matrices/JPtagmatrix_"+pt+'_'+wp)
+	# cfJPtag.SetMatrixOption("WRITE")
 
 	# Settings
 	for cf in [cfJP, cfSV, cfJPtag]:
 		cf.SetVerbose(0)
 		cf.ProducePlots(True)
-		make_dirs('pics/'+wp+'/'+cf.GetRun().split(" ")[0])
-		cf.SetPicsDir('pics/'+wp+'/'+cf.GetRun().split(" ")[0])
+		make_dirs(picdir+'/'+year+wp+'/'+cf.GetRun().split(" ")[0])
+		cf.SetPicsDir(picdir+'/'+year+wp+'/'+cf.GetRun().split(" ")[0])
 		cf.SetBatch(True)
-		cf.SetLegendHeader(pt+" "+wp)
+		cf.SetLegendHeader(pt+" "+wp+", "+year)
 		cf.SetOptimization(OPT_MORPH_SGN_SIGMA)
 		cf.SetCovarianceMode(COV_MAX)
 		cf.SetMorphing(OPTMORPH_CUTOFF,0.5)
@@ -84,12 +96,23 @@ def runSF_x(file, bins, pt_bin, wp,
 		hname_cfromg = 	def_name_qcd+	var+"_all_"+	pt+"_cfromg_opt"
 		hname_c = 		def_name_qcd+	var+"_all_"+	pt+"_c_opt"
 		hname_l = 		def_name_qcd+	var+"_all_"+	pt+"_l_opt"
+
 		hname_b_cfromg =def_name_qcd+	var+"_all_"+	pt+"_b_cfromg_opt"
+		hname_b_bfromg =def_name_qcd+	var+"_all_"+	pt+"_b_bfromg_opt"
 		hname_c_l = 	def_name_qcd+	var+"_all_"+	pt+"_c_l_opt"
+
 		hname_bkg = 	def_name_qcd+	var+"_all_"+	pt+"_b_cfromg_c_l_opt"
+		hname_bkg2 = 	def_name_qcd+	var+"_all_"+	pt+"_b_bfromg_c_l_opt"
 
 		# Make a list
-		hists_nom = [hname_bfromg, hname_b, hname_cfromg, hname_c, hname_l, hname_b_cfromg, hname_c_l, hname_bkg]
+		if not ccSignal:
+			hists_nom = [hname_bfromg, hname_b, hname_cfromg, hname_c, hname_l, 
+						 hname_b_cfromg, hname_c_l,
+						 hname_bkg]
+		else:
+			hists_nom = [hname_cfromg, hname_b, hname_bfromg, hname_c, hname_l, 
+						 hname_b_bfromg, hname_c_l,
+						 hname_bkg2]		
 		# Make lists for tag and untag
 		hists_tag = [] 
 		hists_untag = [] 
@@ -147,26 +170,58 @@ def runSF_x(file, bins, pt_bin, wp,
 					print [f.Get(_nom+_syst), f.Get(_tag+_syst), f.Get(_untag+_syst)]
 					import sys
 					sys.exit()
-			empty_hist_id_tot = (empty_hist_id_tot ^ empty_hist_ix)
-	
+			empty_hist_id_tot = (empty_hist_id_tot | empty_hist_ix)
+
 		if debug: print "Empty templates :", empty_hist_id_tot
+		#hname_bfromg, hname_b, hname_cfromg, hname_c, hname_l
 		if any(empty_hist_id_tot[5:7]) : 
+			if debug: print "Dynamic merge 3 (all bkg)", var, tag
+			merge = 3
+		elif any(empty_hist_id_tot[1:3]) : 
 			if debug: print "Dynamic merge 2", var, tag
-			merge = 2
-		elif any(empty_hist_id_tot[0:5]): 
-			if debug: print "Dynamic merge 1", var, tag
-			merge = 1
+			merge = 2 
+		elif any([empty_hist_id_tot[4]]) : 
+			if debug: print "Dynamic merge 1 (just c and l)", var, tag
+			merge = 1 
 		else:
-			if debug: print "No merging required"
 			merge=0
 
-		if merge == 1: tempNs = ["g #rightarrow b#bar{b}", "b + g #rightarrow c#bar{c}", "c + dusg"]
-		elif merge == 2: tempNs = ["g #rightarrow b#bar{b}", "b + g #rightarrow c#bar{c} + c + dusg"]
-		else: 	tempNs = ["g #rightarrow b#bar{b}", "b", "g #rightarrow c#bar{c}", "c", "dusg"]
+		# if any(empty_hist_id_tot[5:7]) : 
+		# 	if debug: print "Dynamic merge 2", var, tag
+		# 	merge = 2
+		# elif any(empty_hist_id_tot[0:5]): 
+		# 	if debug: print "Dynamic merge 1", var, tag
+		# 	merge = 1
+		# else:
+		# 	if debug: print "No merging required"
+		# 	merge=0
+
+
+		if not ccSignal:
+			if merge == 1: tempNs = ["g #rightarrow b#bar{b}", "b", "g #rightarrow c#bar{c}", "c + dusg"]
+			elif merge == 2: tempNs = ["g #rightarrow b#bar{b}", "b + g #rightarrow c#bar{c}", "c + dusg"]
+			elif merge == 3: tempNs = ["g #rightarrow b#bar{b}", "b + g #rightarrow c#bar{c} + c + dusg"]
+			else: 	tempNs = ["g #rightarrow b#bar{b}", "b", "g #rightarrow c#bar{c}", "c", "dusg"]
+		else:
+			if merge == 1: tempNs = ["g #rightarrow c#bar{c}", "b", "g #rightarrow b#bar{b}", "c + dusg"]
+			elif merge == 2: tempNs = ["g #rightarrow c#bar{c}", "b + g #rightarrow b#bar{b}", "c + dusg"]
+			elif merge == 3: tempNs = ["g #rightarrow c#bar{c}", "b + g #rightarrow b#bar{b} + c + dusg"]
+			else: 	tempNs = ["g #rightarrow c#bar{c}", "b", "g #rightarrow b#bar{b}", "c", "dusg"]
 
 		# AddTemplate(label, name in input file, color)
 		## Nominal
 		if merge==1:	
+			cf.AddTemplate(tempNs[0], hists_nom[0],	65)
+			cf.AddTemplate(tempNs[1], hists_nom[1],	213)
+			cf.AddTemplate(tempNs[2], hists_nom[2],	208)
+			cf.AddTemplate(tempNs[3], hists_nom[6],	597)
+			if glue:
+				if not LTSV:
+					if not ccSignal: cf.GlueTemplates([tempNs[1], tempNs[2]],"b + g #rightarrow c#bar{c}",628);
+					else: cf.GlueTemplates([tempNs[1], tempNs[2]],"b + g #rightarrow b#bar{b}",628);
+				else:
+					cf.GlueTemplates(tempNs[1:],"other flavours",28);
+		elif merge==2:
 			cf.AddTemplate(tempNs[0], hists_nom[0], 65)
 			cf.AddTemplate(tempNs[1], hists_nom[5], 628)
 			cf.AddTemplate(tempNs[2], hists_nom[6],	597)
@@ -175,7 +230,7 @@ def runSF_x(file, bins, pt_bin, wp,
 					pass 
 				else:
 					cf.GlueTemplates(tempNs[1:],"other flavours",28);
-		elif merge==2:	
+		elif merge==3:	
 			cf.AddTemplate(tempNs[0], hists_nom[0], 65)
 			cf.AddTemplate(tempNs[1], hists_nom[7], 28)
 		else:
@@ -187,12 +242,24 @@ def runSF_x(file, bins, pt_bin, wp,
 			if glue:
 				if not LTSV:
 					if not ccSignal: cf.GlueTemplates([tempNs[1], tempNs[2]],"b + g #rightarrow c#bar{c}",628);
-					else: cf.GlueTemplates([tempNs[0], tempNs[1]],"b + g #rightarrow b#bar{b}",628);
+					else: cf.GlueTemplates([tempNs[1], tempNs[2]],"b + g #rightarrow b#bar{b}",628);
 					cf.GlueTemplates([tempNs[3], tempNs[4]],"c + dusg",597)
 				else:
 					cf.GlueTemplates(tempNs[1:],"other flavours",28);
+
 		## Taggged templates
-		if merge==1:
+		if merge==1:	
+			cf.AddTemplateTag(tempNs[0], hists_tag[0],	65)
+			cf.AddTemplateTag(tempNs[1], hists_tag[1],	213)
+			cf.AddTemplateTag(tempNs[2], hists_tag[2],	208)
+			cf.AddTemplateTag(tempNs[3], hists_tag[6],	597)
+			if glue:
+				if not LTSV:
+					if not ccSignal: cf.GlueTemplatesTag([tempNs[1], tempNs[2]],"b + g #rightarrow c#bar{c}",628);
+					else: cf.GlueTemplatesTag([tempNs[1], tempNs[2]],"b + g #rightarrow b#bar{b}",628);
+				else:
+					cf.GlueTemplatesTag(tempNs[1:],"other flavours",28);
+		elif merge==2:
 			cf.AddTemplateTag(tempNs[0], hists_tag[0],		 65)
 			cf.AddTemplateTag(tempNs[1], hists_tag[5], 		628)
 			cf.AddTemplateTag(tempNs[2], hists_tag[6], 		597)
@@ -201,7 +268,7 @@ def runSF_x(file, bins, pt_bin, wp,
 					pass
 				else:
 					cf.GlueTemplatesTag(tempNs[1:],"other flavours",28);
-		elif merge==2:	
+		elif merge==3:	
 			cf.AddTemplateTag(tempNs[0], hists_tag[0], 65)
 			cf.AddTemplateTag(tempNs[1], hists_tag[7], 28)
 		else:
@@ -212,17 +279,22 @@ def runSF_x(file, bins, pt_bin, wp,
 			cf.AddTemplateTag(tempNs[4], hists_tag[4],		212)
 			if glue:
 				if not LTSV:
-					if not ccSignal: cf.GlueTemplates([tempNs[1], tempNs[2]],"b + g #rightarrow c#bar{c}",628);
-					else: cf.GlueTemplates([tempNs[0], tempNs[1]],"b + g #rightarrow b#bar{b}",628);
+					if not ccSignal: cf.GlueTemplatesTag([tempNs[1], tempNs[2]],"b + g #rightarrow c#bar{c}",628);
+					else: cf.GlueTemplatesTag([tempNs[1], tempNs[2]],"b + g #rightarrow b#bar{b}",628);
 					cf.GlueTemplatesTag([tempNs[3], tempNs[4]],"c + dusg",597)
 				else:
 					cf.GlueTemplatesTag(tempNs[1:],"other flavours",28);
 		## Untag templates
 		if merge==1:
 			cf.AddTemplateUntag(tempNs[0], hists_untag[0],	65)
+			cf.AddTemplateUntag(tempNs[1], hists_untag[1],	213)
+			cf.AddTemplateUntag(tempNs[2], hists_untag[2],	208)
+			cf.AddTemplateUntag(tempNs[3], hists_untag[6],	597)
+		elif merge==2:
+			cf.AddTemplateUntag(tempNs[0], hists_untag[0],	65)
 			cf.AddTemplateUntag(tempNs[1], hists_untag[5],	628)
 			cf.AddTemplateUntag(tempNs[2], hists_untag[6],	597)
-		elif merge==2:	
+		elif merge==3:	
 			cf.AddTemplateUntag(tempNs[0], hists_untag[0], 65)
 			cf.AddTemplateUntag(tempNs[1], hists_untag[7], 28)
 		else:			
@@ -279,8 +351,8 @@ def runSF_x(file, bins, pt_bin, wp,
 		effDATA = effMC*par_tag[0]/par[0]
 		sf = effDATA/effMC
 		if debug: print "{: <24} : EffMC = {} , EffData = {} ".format(cf.GetRun().split("_")[0] ,  effMC, effDATA)
-		if debug: print "          Total MC pre-tag / post-tag = {}, signal only = {}".format(nmc, nmc_tag)
-		if debug: print "         Signal MC pre-tag / post-tag = {}, signal only = {}".format(nmc1_tag, nmc1_tag)
+		if debug: print "          Total MC pre-tag / post-tag = {} / = {}".format(nmc, nmc_tag)
+		if debug: print "          Signal MC pre-tag / post-tag = {} / = {}".format(nmc1_tag, nmc1_tag)
  
 		# r_name = cf.GetRun().split(" ")[0]
 		# print r_name
@@ -314,10 +386,15 @@ def runSF_x(file, bins, pt_bin, wp,
 			#print "Fitting JPall"
 			nmc1, nmc, nmc1_tag, nmc_tag, par, par_tag, chi2, chi2_tag = getpars(cfJPall[0], cfJPall[1], sysVar, statVar)
 			#print "Fitting JPtagged" 
-			nmc1_tagged, nmc, nmc1_tagged_SV, nmc_tag, parJPtagged, par_tagJPtagged, chi2tag, chi2_tagtag = getpars(cfJPtag[0], cfJPtag[1], sysVar, statVar)			  
+			nmc1_tagged, nmc_tagged, nmc1_tagged_SV, nmc_tag, parJPtagged, par_tagJPtagged, chi2tag, chi2_tagtag = getpars(cfJPtag[0], cfJPtag[1], sysVar, statVar)			  
 			#print "Fitting SVmass"
 			nmc1_SV_SVfit, nmc, nmc1_tagged_SV_SVfit, nmc_tag, parSV, par_tagSV, chi2SV, chi2_tagSV = getpars(cfmain, tempNs, sysVar, statVar)
-		
+
+			if debug: print "{: <24} : EffMC = {} , EffData = {} ".format('JP only' , nmc1_tagged/nmc1 , nmc_tagged/nmc*parJPtagged/par* (nmc1_tagged/nmc_tagged)/(nmc_tagged/nmc)		)
+			if debug: print "{: <24} : SF = {} ".format('JP SF' ,   par_tag/(par))
+			if debug: print "{: <24} : SF = {} ".format('SV SF' ,	par_tagSV/parSV)
+			if debug: print "{: <24} : SF = {} ".format('Full SF' ,	par_tagSV*parJPtagged*par_tag/(par_tagJPtagged*parSV*par))
+			
 			# Resulting SF
 			SF = par_tagSV*parJPtagged*par_tag/(par_tagJPtagged*parSV*par)
 			pars = [par, par_tag, parJPtagged,par_tagJPtagged, parSV, par_tagSV]
@@ -480,7 +557,7 @@ if __name__ == "__main__":
 	}
 
 	WP = "DDBvLM2"
-	pt_bins = ['pt350to2000', 'pt430to2000']
+	pt_bins = ['pt350to2000', 'pt430to2000', 'pt350to450']
 	m = 0
 
 	file_name = 'col3/collated_normRun2016_DoubleB.root'
@@ -490,14 +567,24 @@ if __name__ == "__main__":
 	#glue=False; addSYS=False; merge=False; calcSYS=False
 	#SF, pars, chi2s = runSF_x(file_name, pt_bins, m, WP, glue=glue, addSYS=addSYS, calcSYS=calcSYS, systname=None, LTSV=True)
 	
-	# SF, sigma_stat, syst_up, syst_down, variances_names, errors, variances, nom_pars, chi2 = runSF_x(file_name, 
-	# 	pt_bins, m, WP, glue=glue, addSYS=addSYS, calcSYS=calcSYS, systname=None, LTSV=True)
-	print "DoubleB 16"
+
+	#file_name = 'col_fin450/collated_normRun2016_DeepAK8ZHbb.root'
+	#SF, pars, chi2s = runSF_x(file_name, pt_bins, 2, "DeepAK8ZHbbM2", glue=glue, addSYS=True, calcSYS=False, systlist=['CFRAG'], systname='CFRAG', LTSV=True, ccSignal=False, debug=True)
 	file_name = 'col_fin450/collated_normRun2016_DoubleB.root'
-	SF, pars, chi2s = runSF_x(file_name, pt_bins, m, "DoubleBM1", glue=glue, addSYS=False, calcSYS=False, systname=None, LTSV=True, ccSignal=False, debug=True)
-	print "DoubleB 17"
-	file_name = 'col_fin450/collated_normRun2017_DoubleB.root'
-	SF, pars, chi2s = runSF_x(file_name, pt_bins, m, "DoubleBM1", glue=glue, addSYS=False, calcSYS=False, systname=None, LTSV=True, ccSignal=False, debug=True)
+	SF, pars, chi2s = runSF_x(file_name, pt_bins, 2, "DoubleBT", glue=glue, addSYS=True, calcSYS=False, systlist=['CFRAG'], systname='CFRAG', LTSV=True, ccSignal=False, debug=True)
+
+	# tag = "DDBvL"
+	# wp = tag+"M1"	
+	# glue=True
+	# print "DoubleB 16"
+	# file_name = 'col_fin450/collated_normRun2016_{}.root'.format(tag)
+	# SF, pars, chi2s = runSF_x(file_name, pt_bins, m, wp , glue=glue, addSYS=False, calcSYS=False, systname=None, LTSV=True, ccSignal=False, debug=True)
+	# print "DoubleB 17"
+	# file_name = 'col_fin450/collated_normRun2017_{}.root'.format(tag)
+	# SF, pars, chi2s = runSF_x(file_name, pt_bins, m, wp , glue=glue, addSYS=False, calcSYS=False, systname=None, LTSV=True, ccSignal=False, debug=True)
+	# print "DoubleB 18"
+	# file_name = 'col_fin450/collated_normRun2018_{}.root'.format(tag)
+	# SF, pars, chi2s = runSF_x(file_name, pt_bins, m, wp, glue=glue, addSYS=False, calcSYS=False, systname=None, LTSV=True, ccSignal=False, debug=True)
 	
 	# file_name = 'colnom/collated_normRun2016_DDBvL.root'
 	# print "DDBvL"

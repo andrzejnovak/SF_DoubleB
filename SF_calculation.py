@@ -179,6 +179,7 @@ if __name__ == "__main__":
 	# Prepare for outside systematic (SF) calculations
 	#all_syst_list = ["JES", "BFRAG", "CFRAG","K0L", "PU", "CDFRAG", "NTRACKS"]
 	all_syst_list = ["BFRAG", "CFRAG","K0L", "PU", "CDFRAG", "NTRACKS", "GCC", "GBB"]
+	#all_syst_list = ["BFRAG", "CFRAG","K0L", "CDFRAG", "NTRACKS", "GCC", "GBB"]
 	_f = R.TFile(r+name2+root)
 	sys_avail = set([_k.GetName().split("_")[-1].replace("up","").replace("down", "").replace("_", "") for _k in _f.GetListOfKeys()])
 	syst_list = list(set(all_syst_list) & set(sys_avail))	
@@ -194,8 +195,8 @@ if __name__ == "__main__":
 			WPs_value.append(value)
 
 	# Specify binning
-	pt_bins = ['pt350to430', 'pt430to2000', 'pt350to2000']
-	#pt_bins = ['pt350to450', 'pt450to2000', 'pt350to2000']
+	#pt_bins = ['pt350to430', 'pt430to2000', 'pt350to2000']
+	pt_bins = ['pt350to450', 'pt450to2000', 'pt350to2000']
 
 	SF_dicts = {}
 	for i in range(len(WPs)):
@@ -228,8 +229,9 @@ if __name__ == "__main__":
 	# If running from start - run all pre SFs
 	else:
 		if not args.nomonly:
+			pass
 			#for WP in WPs: M = step1(WP=WP)
-			for WP in WPs: M = step2(WP=WP)
+			#for WP in WPs: M = step2(WP=WP)
 			#for WP in WPs: M = step2_1(WP=WP)
 
 	pprint.pprint(SF_dicts)

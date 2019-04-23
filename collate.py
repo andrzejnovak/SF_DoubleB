@@ -11,8 +11,8 @@ args = parser.parse_args()
 print("Run name (--name): {}".format(args.name))
 
 din = 'plots_final5'
-pt_bins = ['pt350to430', 'pt430to2000', 'pt350to2000']
-#pt_bins = ['pt350to450', 'pt450to2000', 'pt350to2000']
+#pt_bins = ['pt350to430', 'pt430to2000', 'pt350to2000']
+pt_bins = ['pt350to450', 'pt450to2000', 'pt350to2000']
 names = [f.strip(".root") for f in os.listdir(din) if args.name in f]
 tagger = args.name.split("_")[-1]
 
@@ -21,6 +21,7 @@ for name in names:
 	root_file_dict[name] = R.TFile(os.path.join(din, name+'.root'))
 systnames = [n.replace(args.name, "").strip("_") for n in names] # Autmated available systnames
 print("Systematics found: {}".format(systnames))
+print("Additional systematics: {}".format("JES, GCC, GBB"))
 
 # Read tagger values
 import json
@@ -95,7 +96,8 @@ def collate_systematics(run_name=args.name,
 
 						# Merge some QCD templates
 						if QD == "data": continue
-						for merge, temps in zip (["b_cfromg", "c_l", "b_cfromg_c_l"], [["b","cfromg"], ["c","l"], ["b", "c", "cfromg", "l"]]):
+						for merge, temps in zip (["b_cfromg", "b_bfromg", "c_l", "b_cfromg_c_l", "b_bfromg_c_l"], 
+												[["b","cfromg"], ["b","bfromg"], ["c","l"], ["b", "c", "cfromg", "l"], ["b", "c", "bfromg", "l"]]):
 							for systname in systnames:
 								if len(systname) < 1: # No syst case									
 									hin = rfiles[run_name].Get(in_names[iQD]+LTSVvar+"_"+passfail+"_"+ptbin+"_"+temps[0])
