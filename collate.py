@@ -13,6 +13,7 @@ print("Run name (--name): {}".format(args.name))
 din = 'plots_final5'
 #pt_bins = ['pt350to430', 'pt430to2000', 'pt350to2000']
 pt_bins = ['pt350to450', 'pt450to2000', 'pt350to2000']
+print("Using bins: {}".format(", ".join(pt_bins)))
 names = [f.strip(".root") for f in os.listdir(din) if args.name in f]
 tagger = args.name.split("_")[-1]
 

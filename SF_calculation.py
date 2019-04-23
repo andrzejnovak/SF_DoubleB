@@ -177,8 +177,7 @@ if __name__ == "__main__":
 	name2 = "collated_norm"+args.name
 
 	# Prepare for outside systematic (SF) calculations
-	#all_syst_list = ["JES", "BFRAG", "CFRAG","K0L", "PU", "CDFRAG", "NTRACKS"]
-	all_syst_list = ["BFRAG", "CFRAG","K0L", "PU", "CDFRAG", "NTRACKS", "GCC", "GBB"]
+	all_syst_list = ["JES","BFRAG", "CFRAG","K0L", "PU", "CDFRAG", "NTRACKS", "GCC", "GBB"]
 	#all_syst_list = ["BFRAG", "CFRAG","K0L", "CDFRAG", "NTRACKS", "GCC", "GBB"]
 	_f = R.TFile(r+name2+root)
 	sys_avail = set([_k.GetName().split("_")[-1].replace("up","").replace("down", "").replace("_", "") for _k in _f.GetListOfKeys()])

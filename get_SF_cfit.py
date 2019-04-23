@@ -571,7 +571,7 @@ if __name__ == "__main__":
 	#file_name = 'col_fin450/collated_normRun2016_DeepAK8ZHbb.root'
 	#SF, pars, chi2s = runSF_x(file_name, pt_bins, 2, "DeepAK8ZHbbM2", glue=glue, addSYS=True, calcSYS=False, systlist=['CFRAG'], systname='CFRAG', LTSV=True, ccSignal=False, debug=True)
 	file_name = 'col_fin450/collated_normRun2016_DoubleB.root'
-	SF, pars, chi2s = runSF_x(file_name, pt_bins, 2, "DoubleBT", glue=glue, addSYS=True, calcSYS=False, systlist=['CFRAG'], systname='CFRAG', LTSV=True, ccSignal=False, debug=True)
+	SF, pars, chi2s = runSF_x(file_name, pt_bins, 2, "DoubleBT", glue=glue, addSYS=True, calcSYS=False, systlist=['JES'], systname='JES', LTSV=True, ccSignal=False, debug=True)
 
 	# tag = "DDBvL"
 	# wp = tag+"M1"	
