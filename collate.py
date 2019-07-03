@@ -10,36 +10,45 @@ parser.add_argument('--debug', action="store_true", default=False, help="")
 args = parser.parse_args()
 print("Run name (--name): {}".format(args.name))
 
-din = 'plots_final5'
-#pt_bins = ['pt350to430', 'pt430to2000', 'pt350to2000']
-pt_bins = ['pt350to450', 'pt450to2000', 'pt350to2000']
+din = 'plots_final'
+pt_bins = ['pt350to430', 'pt430to2000', 'pt350to2000']
+#pt_bins = ['pt250to350', 'pt350to450', 'pt450to2000', 'pt350to2000']
 print("Using bins: {}".format(", ".join(pt_bins)))
+#names = [f.strip(".root") for f in os.listdir(din) if args.name in f and 'low' not in args.name]
 names = [f.strip(".root") for f in os.listdir(din) if args.name in f]
 tagger = args.name.split("_")[-1]
 
 root_file_dict = {}
 for name in names:
 	root_file_dict[name] = R.TFile(os.path.join(din, name+'.root'))
-systnames = [n.replace(args.name, "").strip("_") for n in names] # Autmated available systnames
+systnames = [n.replace(args.name, "").strip("_") for n in names if 'low' not in n and 'merge' not in n] # Autmated available systnames
 print("Systematics found: {}".format(systnames))
 print("Additional systematics: {}".format("JES, GCC, GBB"))
+
+merged_file_dict = {}
+for name in names:
+	if 'low' in name or 'merge' in name: continue
+	#os.system('hadd -f '+os.path.join(din, 'merge'+name+'.root')+' '+os.path.join(din, name+'_low.root')+' '+os.path.join(din, name+'.root'))
+	os.system('hadd -f '+os.path.join(din, 'merge'+name+'.root')+' '+os.path.join(din, name+'.root'))
+	merged_file_dict[name] = R.TFile(os.path.join(din, 'merge'+name+'.root'))
+print(merged_file_dict)
 
 # Read tagger values
 import json
 WPs, WPs_value = [], []
 with open('DDX.json') as json_file:
 	data = json.load(json_file)[tagger]
-	for key, value in sorted(data.iteritems(), key=lambda (k,v): (v,k)):
+	for key, value in sorted(data.items(), key=lambda (k,v): (v,k)):
 		WPs.append(str(key))
 		WPs_value.append(value)
 
 def collate_systematics(run_name=args.name,
-						rfiles = root_file_dict,
+						rfiles = merged_file_dict,
 						tagger = tagger,
 						WPs = WPs, 
 						shapein=False,
 						debug=args.debug):		
-	fout = R.TFile("col_fin450/collated{}.root".format(run_name), 'RECREATE')
+	fout = R.TFile("colfin/collated{}.root".format(run_name), 'RECREATE')
 	fout.cd()
 	out_names = ["UNWEIGHTED__DATA__FatJet_", "UNWEIGHTED__QCDMu+__FatJet_"] 
 	in_names = ["DATA__FatJet_", "QCDMu+__FatJet_"]
@@ -59,14 +68,22 @@ def collate_systematics(run_name=args.name,
 								if len(systname) < 1: # No syst case					
 									hin = rfiles[args.name].Get(in_names[iQD]+LTSVvar+"_"+passfail+"_"+ptbin+"_"+flavor)
 									hout_name = out_names[iQD]+LTSVvar+"_"+passfail.replace("_", "")+"_"+ptbin+"_"+flavor+"_opt"									
-									try: hout = hin.Clone(hout_name)
-									except: print(in_names[iQD]+LTSVvar+"_"+passfail+"_"+ptbin+"_"+flavor)
-									hout.Write()
+									try: 
+										hout = hin.Clone(hout_name)
+										hout.Write()
+									except: 
+										print(hin)
+										print(rfiles[args.name])
+										print(in_names[iQD]+LTSVvar+"_"+passfail+"_"+ptbin+"_"+flavor)
+										print(hout_name)
+									
 								elif not systname.endswith("UP") and not systname.endswith("DOWN"): # one sided syst case
 									# Copy syst as up
 									hin = rfiles[run_name+"_"+systname].Get(in_names[iQD]+LTSVvar+"_"+passfail+"_"+ptbin+"_"+flavor)
 									hout_name = out_names[iQD]+LTSVvar+"_"+passfail.replace("_", "")+"_"+ptbin+"_"+flavor+"_opt_"+systname+"up"
-									hout = hin.Clone(hout_name)
+									try:
+										hout = hin.Clone(hout_name)
+									except: print(hout_name)
 									hout.Write()
 									# Set down to nominal
 									hin = rfiles[run_name].Get(in_names[iQD]+LTSVvar+"_"+passfail+"_"+ptbin+"_"+flavor)
@@ -159,14 +176,16 @@ def produce_scalevars(	scaletemplate = None,
 						tagger = tagger,
 						run_name=args.name,
 						debug=args.debug,
-						keepsys=True
+						keepsys=True,
+						mcjp=False
 						):
 	
-	fin = R.TFile("col_fin450/collated{}.root".format(run_name))
+	fin = R.TFile("colfin/collated{}.root".format(run_name))
 	if scaletemplate != None:
-		fout = R.TFile("col_fin450/collated_norm{}.root".format(run_name+"_"+scaletemplate+"_"+updown), 'RECREATE')
+		fout = R.TFile("colfin/collated_norm{}.root".format(run_name+"_"+scaletemplate+"_"+updown), 'RECREATE')
 	else:
-		fout = R.TFile("col_fin450/collated_norm{}.root".format(run_name), 'RECREATE')
+		if not mcjp: fout = R.TFile("colfin/collated_norm{}.root".format(run_name), 'RECREATE')
+		else: fout = R.TFile("colfin/collated_norm{}_MCJP.root".format(run_name), 'RECREATE')
 	fout.cd()
 	
 	for LTSVvar in ["JP", "JPhasSV", "JPnoSV", "tau1VertexMassCorr"]:
@@ -178,11 +197,25 @@ def produce_scalevars(	scaletemplate = None,
 					if keepsys: 
 						systlist = [""]+[s.replace("UP","").replace("DOWN", "")+"up" for s in systnames if len(s) > 0]+[s.replace("UP","").replace("DOWN","")+"down" for s in systnames if len(s) > 0] # Must include up/down
 						systlist = systlist + ["JESup", "JESdown", "GBBdown", "GCCdown", "GBBup", "GCCup"]
+						systlist = [sys for sys in systlist if not sys.startswith("MCJP")]
 					else: systlist = [""]
+
+					hout_name = "{}"+LTSVvar+"_"+passfail.replace("_", "")+"_"+ptbin+"_{}_opt{}"								
+					# Write Data
+					if not mcjp:
+						hout = fin.Get(hout_name.format("UNWEIGHTED__DATA__FatJet_", "data", ""))
+						hout.Write()
+					# Write mcjp data
+					else:
+						hin = fin.Get(hout_name.format("UNWEIGHTED__DATA__FatJet_", "data", "_MCJPup"))
+						#print(hout_name.format("UNWEIGHTED__DATA__FatJet_", "data", "MCJPup"))
+						#print(hin)
+						hout = hin.Clone(hout_name.format("UNWEIGHTED__DATA__FatJet_", "data", ""))
+						hout.Write()
+					# Write MC with systematics
 					for systname in systlist :
 						if len(systname) > 0: systname = "_"+systname
 						if debug: print(systname)
-						hout_name = "{}"+LTSVvar+"_"+passfail.replace("_", "")+"_"+ptbin+"_{}_opt{}"								
 						if debug: print(hout_name.format("UNWEIGHTED__DATA__FatJet_", "data", systname))
 						int_data = fin.Get(hout_name.format("UNWEIGHTED__DATA__FatJet_", "data", systname)).Integral()
 						int_flavs, int_old = [], []
@@ -198,9 +231,8 @@ def produce_scalevars(	scaletemplate = None,
 						int_qcd = np.sum(int_flavs)
 						norm = 1#int_data/(int_qcd+0.0000000000000000000000000000000001
 						int_flavs_corr = []
-						hout = fin.Get(hout_name.format("UNWEIGHTED__DATA__FatJet_", "data", systname))
-						hout.Write()
-						for flavor in ["b", "bfromg", "c", "cfromg", "l", "b_cfromg", "c_l", "b_cfromg_c_l"]:
+						
+						for flavor in ["b", "bfromg", "c", "cfromg", "l", "b_cfromg", "b_bfromg", "c_l", "b_cfromg_c_l", "b_bfromg_c_l"]:
 							hout = fin.Get(hout_name.format("UNWEIGHTED__QCDMu+__FatJet_", flavor, systname))
 							if scaletemplate!= None and scaletemplate in flavor.split("_"):
 								if updown == "up": 
@@ -221,6 +253,7 @@ def produce_scalevars(	scaletemplate = None,
 if __name__ == "__main__":
 	collate_systematics()
 	produce_scalevars(keepsys=True) # Produce norms
+	produce_scalevars(keepsys=True, mcjp=True) # Produce norms
 	sys.exit()
 	for ud in ["up", "down"]:
 		for temp in ['b', 'bfromg', 'c', 'cfromg', 'l']:

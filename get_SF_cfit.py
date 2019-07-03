@@ -15,6 +15,7 @@ def runSF_x(file, bins, pt_bin, wp,
 	picdir = 'pics'
 	year=file.split("Run")[-1][:4]
 	if debug: picdir = 'testpics'
+	if ccSignal: print 'Fitting for g->cc'
 		
 	stat_n = 100 #100 #Set how many time to run statistical variation
 	pt = bins[pt_bin] # Pick a pt bin
@@ -161,18 +162,20 @@ def runSF_x(file, bins, pt_bin, wp,
 		empty_hist_id_tot = np.array([False] * len(hists_nom))
 		for _syst in _systVarlist:
 			empty_hist_ix = []			
+			#print _syst
 			for i, (_nom, _tag, _untag) in enumerate(zip(hists_nom, hists_tag, hists_untag)):
-				#print f.Get(_nom), f.Get(_tag), f.Get(_untag)
-				#print i, _nom, f.Get(_nom).Integral(), f.Get(_tag).Integral(), f.Get(_untag).Integral()	
+				#print i, _nom, f.Get(_nom+_syst).Integral(), f.Get(_tag+_syst).Integral(), f.Get(_untag+_syst).Integral()	
 				try:
 					empty_hist_ix.append(any(_int == 0. for _int in [f.Get(_nom+_syst).Integral(), f.Get(_tag+_syst).Integral(), f.Get(_untag+_syst).Integral()]))
 				except:
+					print [_nom+_syst, _tag+_syst, _untag+_syst]
 					print [f.Get(_nom+_syst), f.Get(_tag+_syst), f.Get(_untag+_syst)]
 					import sys
 					sys.exit()
 			empty_hist_id_tot = (empty_hist_id_tot | empty_hist_ix)
 
-		if debug: print "Empty templates :", empty_hist_id_tot
+		#if debug: print "Empty templates :", empty_hist_id_tot
+		print "Empty templates :", empty_hist_id_tot
 		#hname_bfromg, hname_b, hname_cfromg, hname_c, hname_l
 		if any(empty_hist_id_tot[5:7]) : 
 			if debug: print "Dynamic merge 3 (all bkg)", var, tag
@@ -180,12 +183,12 @@ def runSF_x(file, bins, pt_bin, wp,
 		elif any(empty_hist_id_tot[1:3]) : 
 			if debug: print "Dynamic merge 2", var, tag
 			merge = 2 
-		elif any([empty_hist_id_tot[4]]) : 
+		elif any(empty_hist_id_tot[3:5]) : 
 			if debug: print "Dynamic merge 1 (just c and l)", var, tag
 			merge = 1 
 		else:
 			merge=0
-
+		if debug: print 'merge', merge
 		# if any(empty_hist_id_tot[5:7]) : 
 		# 	if debug: print "Dynamic merge 2", var, tag
 		# 	merge = 2
@@ -207,6 +210,7 @@ def runSF_x(file, bins, pt_bin, wp,
 			elif merge == 2: tempNs = ["g #rightarrow c#bar{c}", "b + g #rightarrow b#bar{b}", "c + dusg"]
 			elif merge == 3: tempNs = ["g #rightarrow c#bar{c}", "b + g #rightarrow b#bar{b} + c + dusg"]
 			else: 	tempNs = ["g #rightarrow c#bar{c}", "b", "g #rightarrow b#bar{b}", "c", "dusg"]
+		print 'Signal template', tempNs[0]
 
 		# AddTemplate(label, name in input file, color)
 		## Nominal
@@ -557,21 +561,23 @@ if __name__ == "__main__":
 	}
 
 	WP = "DDBvLM2"
-	pt_bins = ['pt350to2000', 'pt430to2000', 'pt350to450']
+	#pt_bins = ['pt350to2000', 'pt430to2000', 'pt350to450']
+	pt_bins = ['pt250to350', 'pt350to2000', 'pt450to2000', 'pt350to450']
 	m = 0
 
 	file_name = 'col3/collated_normRun2016_DoubleB.root'
 	file_name = 'col3/collatedRun2016_DoubleB.root'
 	
-	glue=False; addSYS=True; calcSYS=True
+	glue=True; addSYS=True; calcSYS=True
 	#glue=False; addSYS=False; merge=False; calcSYS=False
 	#SF, pars, chi2s = runSF_x(file_name, pt_bins, m, WP, glue=glue, addSYS=addSYS, calcSYS=calcSYS, systname=None, LTSV=True)
 	
 
 	#file_name = 'col_fin450/collated_normRun2016_DeepAK8ZHbb.root'
 	#SF, pars, chi2s = runSF_x(file_name, pt_bins, 2, "DeepAK8ZHbbM2", glue=glue, addSYS=True, calcSYS=False, systlist=['CFRAG'], systname='CFRAG', LTSV=True, ccSignal=False, debug=True)
-	file_name = 'col_fin450/collated_normRun2016_DoubleB.root'
-	SF, pars, chi2s = runSF_x(file_name, pt_bins, 2, "DoubleBT", glue=glue, addSYS=True, calcSYS=False, systlist=['JES'], systname='JES', LTSV=True, ccSignal=False, debug=True)
+	#file_name = 'colfin/collated_normRun2018_DDBvL.root'
+	file_name = 'colfin/collated_normRun2018_DDCvL.root'
+	SF, pars, chi2s = runSF_x(file_name, pt_bins, 1, "DDCvLL", glue=True, addSYS=True, calcSYS=False, systlist=[], systname=None, LTSV=True, ccSignal=True, debug=True)
 
 	# tag = "DDBvL"
 	# wp = tag+"M1"	

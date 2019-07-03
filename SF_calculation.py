@@ -24,9 +24,10 @@ args = parser.parse_args()
 if args.outname == None:
 	args.outname = args.name
 
-if "DDCvL" in args.name:
+if "DDCvL" in args.name or "ZHcc" in args.name:
 	ccSignal = True
 else: ccSignal = False
+print 'cc', ccSignal
 
 def make_dirs(dirname):
     """
@@ -66,8 +67,9 @@ def step0(WP=None, pt_bin_ix=0, systname=None, addSYS=True):
 	pt_bin = pt_bins[pt_bin_ix]
 	start = time.time()
 	if int(pt_bin.split("to")[-1]) <= 350:
-		file_name = r+name1+root
-		SF, pars, chi2 = runSF_x(file_name, pt_bins, m, WP, glue=glue,  addSYS=addSYS, calcSYS=calcSYS, systlist=syst_list, ccSignal=ccSignal)
+		file_name = r+name2+root
+		SF, pars, chi2 = runSF_x(file_name, 
+			pt_bins, pt_bin_ix, WP, glue=glue,  addSYS=addSYS, calcSYS=calcSYS, LTSV=LTSV, systlist=syst_list, systname=systname, ccSignal=ccSignal) 
 	else:
 		file_name = r+name2+root
 		SF, pars, chi2 = runSF_x(file_name,
@@ -84,12 +86,12 @@ def step1(templates=templates, WP=None):
 		for m, pt_bin in enumerate(pt_bins):
 			start = time.time()
 			if int(pt_bin.split("to")[-1]) <= 350:
-				file_name = r1+name1+"_"+WP+"_"+template+root
-				SF, pars, chi2 = runSF_x(file_name, pt_bins, m, WP, glue=glue,  addSYS=addSYS, calcSYS=calcSYS, systlist=syst_list)
+				file_name = r+name2+"_"+WP+"_"+template+root
+				SF, pars, chi2 = runSF_x(file_name, pt_bins, m, WP, glue=glue, addSYS=addSYS, calcSYS=calcSYS, LTSV=LTSV, systlist=syst_list, ccSignal=ccSignal) 
 			else:
 				file_name = r+name2+"_"+template+root		
 				print file_name
-				SF, pars, chi2 = runSF_x(file_name, pt_bins, m, WP, glue=glue, addSYS=addSYS, calcSYS=calcSYS, LTSV=LTSV, systlist=syst_list)
+				SF, pars, chi2 = runSF_x(file_name, pt_bins, m, WP, glue=glue, addSYS=addSYS, calcSYS=calcSYS, LTSV=LTSV, systlist=syst_list, ccSignal=ccSignal) 
 				#SF, pars, chi2 = runSF_x(file_name, pt_bins, m, WP, merge=merge, glue=glue, addSYS=addSYS, calcSYS=calcSYS)
 			
 			print "		", SF	
@@ -104,12 +106,12 @@ def step2(WP=None):
 	for m, pt_bin in enumerate(pt_bins):
 		start = time.time()
 		if int(pt_bin.split("to")[-1]) <= 350:
-			file_name = r+name1+root
-			SF, pars, chi2 = runSF_x(file_name, pt_bins, m, WP, glue=glue,  addSYS=addSYS, calcSYS=calcSYS, LTSV=LTSV, systlist=syst_list)
+			file_name = r+name2+root
+			SF, pars, chi2 = runSF_x(file_name, pt_bins, m, WP, glue=glue,  addSYS=addSYS, calcSYS=calcSYS, LTSV=LTSV, systlist=syst_list, ccSignal=ccSignal) 
 		else: 
 			#file_name = r+name2+WP+root
 			file_name = r+name2+root
-			SF, pars, chi2 = runSF_x(file_name, pt_bins, m, WP, glue=glue,  addSYS=addSYS, calcSYS=calcSYS, LTSV=LTSV, systlist=syst_list)
+			SF, pars, chi2 = runSF_x(file_name, pt_bins, m, WP, glue=glue,  addSYS=addSYS, calcSYS=calcSYS, LTSV=LTSV, systlist=syst_list, ccSignal=ccSignal) 
 		
 		print "		", SF	
 		print "      Time to run: ", np.round((time.time() - start)/60, 2), "min"
@@ -122,13 +124,11 @@ def step2_1(WP=None):
 	glue=True; addSYS=True;  calcSYS=False
 	for m, pt_bin in enumerate(pt_bins):
 		start = time.time()
+		file_name = r+name2+"_MCJP"+root
 		if int(pt_bin.split("to")[-1]) <= 350:
-			file_name = rjp+"Run2017BCDEF_ReReco_QCDMuonEnriched_AK4DiJet170_Pt250_Final_DoubleMuonTaggedFatJets_histograms_btagval_allVars_ptReweighted_dataUseMCJPcalib_SysMerged_SFtemplates_"+WP+root
-			SF, pars, chi2 = runSF_x(file_name, pt_bins, m, WP, glue=glue,  addSYS=addSYS, calcSYS=calcSYS, systlist=syst_list)
-			
+			SF, pars, chi2 = runSF_x(file_name, pt_bins, m, WP, glue=glue, addSYS=addSYS, calcSYS=calcSYS, systlist=syst_list, ccSignal=ccSignal) 
 		else:
-			file_name = rjp+"Run2017BCDEF_ReReco_QCDMuonEnriched_AK8Jet300orAK4Jet300_Pt350_Final_DoubleMuonTaggedFatJets_histograms_btagval_allVars_ptReweighted_dataUseMCJPcalib_SysMerged_SFtemplates_"+WP+root
-			SF, pars, chi2 = runSF_x(file_name, pt_bins, m, WP, glue=glue, addSYS=addSYS, calcSYS=calcSYS, systlist=syst_list)
+			SF, pars, chi2 = runSF_x(file_name, pt_bins, m, WP, glue=glue, addSYS=addSYS, calcSYS=calcSYS, systlist=syst_list, ccSignal=ccSignal) 
 		
 		print SF				
 		print "Time to run: ", np.round((time.time() - start)/60, 2), "min"
@@ -142,15 +142,15 @@ def step3(WP=None, pt_bin_ix=0, SF_dict=SF_dict_empty):
 	pt_bin = pt_bins[pt_bin_ix]
 	start = time.time()
 	if int(pt_bin.split("to")[-1]) <= 350:
-		file_name = r1+name1+"_"+WP+root
+		file_name = r+name2+"_"+WP+root
 		file_name = r+name2+root
 		SF, sigma_stat, syst_up, syst_down, variances_names, errors, variances, nom_pars, chi2 = runSF_x(file_name, 
-			pt_bins, pt_bin_ix, WP, glue=glue,  addSYS=addSYS, calcSYS=calcSYS, SF_dict=SF_dict, LTSV=LTSV, systlist=syst_list)
+			pt_bins, pt_bin_ix, WP, glue=glue,  addSYS=addSYS, calcSYS=calcSYS, SF_dict=SF_dict, LTSV=LTSV, systlist=syst_list, ccSignal=ccSignal) 
 	else:
 		file_name = r+name2+root
 		SF_dict = SF_dicts['SF_dict_{}'.format(WPs.index(WP))]
 		SF, sigma_stat, syst_up, syst_down, variances_names, errors, variances, nom_pars, chi2 = runSF_x(file_name, 
-			pt_bins, pt_bin_ix, WP, glue=glue,  addSYS=addSYS, calcSYS=calcSYS, SF_dict=SF_dict, LTSV=LTSV, systlist=syst_list) 
+			pt_bins, pt_bin_ix, WP, glue=glue,  addSYS=addSYS, calcSYS=calcSYS, SF_dict=SF_dict, LTSV=LTSV, systlist=syst_list, ccSignal=ccSignal) 
 		
 	if LTSV: 
 		SF_SV = (nom_pars[5]/nom_pars[4])
@@ -174,6 +174,7 @@ if __name__ == "__main__":
 
 	#r = 'col4/'
 	r = 'col_fin450/'
+	r = 'colfin/'
 	name2 = "collated_norm"+args.name
 
 	# Prepare for outside systematic (SF) calculations
@@ -195,7 +196,9 @@ if __name__ == "__main__":
 
 	# Specify binning
 	#pt_bins = ['pt350to430', 'pt430to2000', 'pt350to2000']
-	pt_bins = ['pt350to450', 'pt450to2000', 'pt350to2000']
+	#pt_bins = ['pt250to350','pt350to450', 'pt450to2000', 'pt350to2000']
+	#pt_bins = ['pt250to350', 'pt350to2000']
+	pt_bins = ['pt350to2000']
 
 	SF_dicts = {}
 	for i in range(len(WPs)):
@@ -259,7 +262,7 @@ if __name__ == "__main__":
 				df2 = pd.read_csv('DF_res{}.csv'.format(args.name), index_col=0)
 				df = pd.read_csv('DF_sys{}.csv'.format(args.name), index_col=0)
 
-			if np.isnan(df2.loc[row_name, 'SF']) :
+			if row_name not in df2.index or  np.isnan(df2.loc[row_name, 'SF']):
 				print df2
 				if args.nomonly:
 					SF_nom = step0(WP=WP, pt_bin_ix=ix)	
@@ -268,24 +271,22 @@ if __name__ == "__main__":
 					SF_nom = step0(WP=WP, pt_bin_ix=ix)	
 					SF, sigma_stat, syst_up, syst_down, variances_names, errors, variances, SF_SV, preeff, tageff, SF_JP = step3(WP=WP, pt_bin_ix=ix, SF_dict=WP_dict)	
 
-					df = df.append(dict(zip(variances_names, errors)), ignore_index=True)
-					df.to_csv('DF_sys{}.csv'.format(args.name))
-
+					df = df.append(pd.DataFrame(dict(zip(variances_names,errors)), index=[row_name]))
+					
 				df2.loc[row_name] = [SF, SF_nom, sigma_stat, syst_up, syst_down, SF_SV, SF_JP, preeff, tageff, 
 								np.sqrt(sigma_stat**2 + syst_up**2),
 								np.sqrt(sigma_stat**2 + syst_down**2)
 				]
+
 			 				
 				df2.to_csv('DF_res{}.csv'.format(args.name))
+				df.to_csv('DF_sys{}.csv'.format(args.name))
 				
 			else:
 				continue
 			
-			#if args.load2:
-			# 	df2 = pd.read_csv('DF_res{}.csv'.format(args.outname))
 			print df
 			print df2
 			
-			#df.to_csv('DF_sys{}.csv'.format(args.outname))
-
+			
 
